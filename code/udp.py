@@ -15,7 +15,13 @@ import gc
 import time
 import multiprocessing as mp
 import sys
-import pickle
+import os
+
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(CURRENT_DIR)
+if CURRENT_DIR not in sys.path:
+    sys.path.insert(0, CURRENT_DIR)
 
 
 infinitesimal = np.finfo(float).eps
@@ -61,7 +67,7 @@ def log_likelihood_deriv_nb(params, *args):
 
 def nbfit(X):
     # reasonable initial values (from fitdistr function in R)
-    m = np.mean(X)  # Estimation of number of failures.
+    m = np.mean(X) # Estimation of number of failures.
     v = np.var(X)
     size = (m ** 2) / (v - m) if v > m else 10
     # convert size,mu to size,probability of success.
@@ -73,15 +79,15 @@ def nbfit(X):
     # args: sequence (optional) Arguments to pass to func and fprim
     # approx_gradbool: Whether to approximate the gradient numerically (in which case func returns only the function value).
     # bounds: (min, max) pairs for each element in x, defining the bounds on that parameter. Use None or +-inf for one of min or max when there is no bound in that direction.
-    bounds = [(infinitesimal, None), (infinitesimal, 1)]  # Bounds for n and p.
+    bounds = [(infinitesimal, None), (infinitesimal, 1)] # Bounds for n and p.
     optimres = optim(log_likelihood_nb, x0=initial_params, args=(X + infinitesimal,), fprime=log_likelihood_deriv_nb,
-                     bounds=bounds)  # , approx_grad=1
+                     bounds=bounds) # , approx_grad=1
     params = optimres[0]
     # f_value = optimres[1] #Maximm likelihood reached.
     # d['warnflag'] is 0 if converged, 1 if too many function evaluations or too many iterations,
     # 2 if stopped for another reason, given in d['task'].
     # warn = optimres[2] #Dictinary with convergance resutls.
-    return {'size': params[0], 'prob': params[1]}  # , 'f_value': f_value, 'warn': warn, 'aic':aic}
+    return {'size': params[0], 'prob': params[1]} # , 'f_value': f_value, 'warn': warn, 'aic':aic}
 
 
 # Calculate UDP for each pair of probe,sample. UDP is the probability of the higher Normal distribution.
@@ -91,10 +97,11 @@ def calc_udp_nbm(data, aic_test=False):
     for index, row in data.iterrows():
         #row = row.astype(int).values
         # Remove outliers
-        if (np.count_nonzero(row) < 10):  # (row == 0).all() or np.sum(row)<200 or max(row) < 5
+        if (np.count_nonzero(row) < 10): # (row == 0).all() or np.sum(row)<200 or max(row) < 5
             my_udp = np.append(my_udp, [np.zeros(len(data.columns))], axis=0)
             continue
-        row[np.argsort(row)[-3]] = row[np.argsort(row)[-2]] = row[np.argsort(row)[-1]] = row[np.argsort(row)[-4]]
+        pos = np.argsort(row.values)
+        row.iloc[pos[-3]] = row.iloc[pos[-2]] = row.iloc[pos[-1]] = row.iloc[pos[-4]]
         res = nbfit(row)
         size = res['size']
         prob = res['prob']
@@ -103,7 +110,7 @@ def calc_udp_nbm(data, aic_test=False):
         if(aic_test):
             row[row == 0] = 1
             LogLik = (np.log(nbinom.pmf(row, size, prob) + infinitesimal)).sum()
-            aic += (2 * 2 - 2 * LogLik) / 1000  # (-log_likelihood((size, prob), row))
+            aic += (2 * 2 - 2 * LogLik) / 1000 # (-log_likelihood((size, prob), row))
     return (pd.DataFrame(data=my_udp, index=data.index, columns=data.columns)), aic
 
 
@@ -124,7 +131,7 @@ def calc_udp_gmm(data, aic_test=False):
 def calc_udp_norm(data, aic_test=False):
     my_udp = np.empty((0, len(data.columns)))
     aic = 0
-    k = 2  # len(fitted_params)
+    k = 2 # len(fitted_params)
     for index, row in data.iterrows():
         if (row == 0).all():
             my_udp = np.append(my_udp, [np.zeros(len(data.columns))], axis=0)
@@ -145,7 +152,7 @@ def calc_udp_poisson(data, aic_test=False):
         # Using Stirling formula to avoid calculation of factorial.
         # logfactorial(n) = n*ln(n) - n
         n = x.size
-        logfactorial = np.log(factorial(x))  # x*np.log(x) - x #
+        logfactorial = np.log(factorial(x)) # x*np.log(x) - x #
         logfactorial[logfactorial == -inf] = 0
         result =\
             - np.sum(logfactorial) \
@@ -158,13 +165,13 @@ def calc_udp_poisson(data, aic_test=False):
     for index, row in data.iterrows():
         row = row.astype(int).values
         # Remove outliers
-        if (max(row) < 5 or np.count_nonzero(row) < 10):  # (row == 0).all() or np.sum(row)<200
+        if (max(row) < 5 or np.count_nonzero(row) < 10): # (row == 0).all() or np.sum(row)<200
             my_udp = np.append(my_udp, [np.zeros(len(data.columns))], axis=0)
             continue
         row[np.argsort(row)[-3]] = row[np.argsort(row)[-2]] = row[np.argsort(row)[-1]] = row[np.argsort(row)[-4]]
         # res = poisson.fit(row) #No fit for discrete scipy.stats distribution.
         #result = []
-        # for i in range(np.mean(row)-60, np.mean(row)+60):  # in fact (80, 120) should probably be enough
+        # for i in range(np.mean(row)-60, np.mean(row)+60): # in fact (80, 120) should probably be enough
         #    _ = optim.fmin(likelihood_f, [i, 0.5, 0], args=(X, -1), full_output=True, disp=False)
         #    result.append((_[1], _[0]))
         #P2 = sorted(result, key=lambda x: x[0])[0][1]
@@ -181,13 +188,13 @@ def calc_udp_poisson(data, aic_test=False):
 def calc_udp_gennorm(data, aic_test=False):
     my_udp = np.empty((0, len(data.columns)))
     aic = 0
-    k = 1  # len(fitted_params)
+    k = 1 # len(fitted_params)
     for index, row in data.iterrows():
         if (max(row) < 5 or np.count_nonzero(row) < 10):
             my_udp = np.append(my_udp, [np.zeros(len(data.columns))], axis=0)
             continue
         row = row.values.reshape(-1, 1)
-        beta, loc, scale = gennorm.fit(row)  # https://en.wikipedia.org/wiki/Generalized_normal_distribution. gennorm.numargs==1.
+        beta, loc, scale = gennorm.fit(row) # https://en.wikipedia.org/wiki/Generalized_normal_distribution. gennorm.numargs==1.
         row_probs = gennorm.pdf(row, beta, loc=loc, scale=scale)[:, 0]
         my_udp = np.append(my_udp, [row_probs], axis=0)
         if(aic_test):
@@ -203,23 +210,19 @@ def chunker_rows(data, size):
 
 
 # Run calc_udp on parallel.
-def calc_udp_multi_process(is_rnaseq):
+def calc_udp_multi_process():
     data = pd.read_csv(relative_path + 'input.csv', index_col=0)
-    gc.collect()
-    print(time.ctime(), f'Calculate UDP, is_rnaseq: {is_rnaseq}')
+    relations = pd.read_csv(relative_path + 'pathway_relations.csv')
+    relations['source'] = relations['source'].fillna('').astype(str).str.lower().str.split('*')
+    genes = set(gene for gene_list in relations['source'] for gene in gene_list)
+    print(time.ctime(), f'Calculate UDP')
     data = data.apply(lambda row: row.fillna(row.mean()), axis=1)
     data.index = data.index.map(str.lower)
+    data = data.loc[data.index.isin(genes)]
     if data.max().max() < 20:
         data = 2 ** data
-    probes = pd.read_csv(relative_path + 'probelinksv2.txt', index_col=0)
-    genes = pd.read_csv(relative_path + 'gene_list.csv')
-    if (not is_rnaseq):
-        data = data.loc[list(set(data.index) & set(probes.probe.values))]
-        func = calc_udp_gmm
-    else:
-        genes['gene'] = genes.gene.map(str.lower)
-        #data = data.loc[list(set(data.index) & set(genes.gene.values))]
-        func = calc_udp_nbm #calc_udp_poisson
+    #func = calc_udp_gmm #Microarray
+    func = calc_udp_nbm #calc_udp_poisson #RNASeq
     df = pd.DataFrame()
     pool = mp.Pool()  # Use number of CPUs processes.
     results = [pool.apply_async(func, args=(x,)) for x in chunker_rows(data, 700)]
@@ -230,6 +233,7 @@ def calc_udp_multi_process(is_rnaseq):
         print('.', end="")
         sys.stdout.flush()
     pool.close()
+    df = df.round(3)
     df.to_csv(relative_path + 'output_udp.csv')
     print(time.ctime(), 'Done.')
     return df
@@ -240,4 +244,4 @@ if __name__ == '__main__':
     #for func in [calc_udp_poisson, calc_udp_nbm, calc_udp_gmm, calc_udp_norm, calc_udp_gennorm]:
     #    udp, aic = func(sample_data, aic_test=True)
     #    print(f'Function: {func.__name__}, aic: {aic}')
-    calc_udp_multi_process(True)
+    calc_udp_multi_process()
