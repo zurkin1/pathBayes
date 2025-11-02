@@ -11,7 +11,6 @@ from scipy.optimize import fmin_l_bfgs_b as optim
 from scipy.stats import nbinom, norm, poisson, gennorm
 from sklearn.mixture import GaussianMixture as GMM
 from numpy import inf
-import gc
 import time
 import multiprocessing as mp
 import sys

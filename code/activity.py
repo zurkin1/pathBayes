@@ -10,6 +10,10 @@ os.chdir(CURRENT_DIR)
 if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 TEST = 'test_'
+UDP_WEIGHT=0.5 #Equal balance (recommended default).
+CPD_ACTIVATION=0.85 #CPD weight for activation interactions.
+CPD_INHIBITION=0.15 #CPD weight for inhibition interactions.
+CPD_BASELINE=0.1 #Baseline probability.
 
 
 def is_inhibitory(interaction_type):
@@ -35,7 +39,7 @@ def get_gene_parents(gene, interactions):
     return parents
 
 
-def compute_message(sources, inttype, beliefs, cpd_params):
+def compute_message(sources, inttype, beliefs):
     """
     Compute message from source genes through an interaction.
     
@@ -43,7 +47,6 @@ def compute_message(sources, inttype, beliefs, cpd_params):
         sources: list of source gene names
         inttype: interaction type string
         beliefs: dict of current belief values {gene: probability_up}
-        cpd_params: dict with 'activation' and 'inhibition' weights
     
     Returns:
         message: probability value representing combined input
@@ -61,24 +64,22 @@ def compute_message(sources, inttype, beliefs, cpd_params):
     if is_inhibitory(inttype):
         # For inhibition: high input → low output
         # P(output=Up | inhibited) = baseline * (1 - combined)
-        message = cpd_params['inhibition'] * (1.0 - combined)
+        message = CPD_INHIBITION * (1.0 - combined)
     else:
         # For activation: high input → high output
         # P(output=Up | activated) = baseline + weight * combined
-        message = cpd_params['baseline'] + cpd_params['activation'] * combined
+        message = CPD_BASELINE + CPD_ACTIVATION * combined
     
     return np.clip(message, 0.0, 1.0)
 
 
-def loopy_belief_propagation(interactions, initial_beliefs, cpd_params, 
-                             max_iterations=30, tolerance=1e-3):
+def loopy_belief_propagation(interactions, initial_beliefs, max_iterations=30, tolerance=1e-3):
     """
     Run Loopy Belief Propagation on pathway network.
     
     Args:
         interactions: list of (sources, inttype, targets) tuples
         initial_beliefs: dict of {gene: udp_value} for input genes
-        cpd_params: CPD parameters for message computation
         max_iterations: maximum number of LBP iterations
         tolerance: convergence threshold
     
@@ -119,16 +120,21 @@ def loopy_belief_propagation(interactions, initial_beliefs, cpd_params,
                     # Compute messages from all parent interactions
                     messages = []
                     for sources, inttype in parents:
-                        msg = compute_message(sources, inttype, old_beliefs, cpd_params)
+                        msg = compute_message(sources, inttype, old_beliefs)
                         messages.append(msg)
                     
                     # Combine messages using noisy-OR
                     if len(messages) == 1:
-                        new_beliefs[gene] = messages[0]
+                        propagated_belief = messages[0]
                     else:
                         # Multiple parents: noisy-OR combination
                         combined = 1.0 - np.prod([1.0 - m for m in messages])
-                        new_beliefs[gene] = combined
+                        propagated_belief = combined
+    
+                    # Combine propagated belief with original UDP value.
+                    original_udp = initial_beliefs.get(gene, 0.5)
+                    new_beliefs[gene] = (UDP_WEIGHT * original_udp + 
+                                        (1 - UDP_WEIGHT) * propagated_belief)
         
         beliefs = new_beliefs
         
@@ -142,7 +148,7 @@ def loopy_belief_propagation(interactions, initial_beliefs, cpd_params,
 
 def process_sample(args):
     """Process all pathways for a single sample with LBP"""
-    sample_idx, sample_udp, sample_name, pathway_interactions, cpd_params = args
+    sample_idx, sample_udp, pathway_interactions = args
     pathway_activities = {}
     pathway_beliefs = {}
     
@@ -152,9 +158,7 @@ def process_sample(args):
         initial_beliefs = {gene: sample_udp.get(gene, 0.5) for gene in pathway_genes}
         
         # Run LBP
-        final_beliefs = loopy_belief_propagation(
-            interactions, initial_beliefs, cpd_params
-        )
+        final_beliefs = loopy_belief_propagation(interactions, initial_beliefs)
         
         # Calculate pathway activity as mean of all gene beliefs
         pathway_activity = np.mean(list(final_beliefs.values()))
@@ -165,16 +169,12 @@ def process_sample(args):
     return sample_idx, pathway_activities, pathway_beliefs
 
 
-def calc_activity(udp_file=f'./data/{TEST}output_udp.csv', 
-                 cpd_activation=0.85, cpd_inhibition=0.15, cpd_baseline=0.1):
+def calc_activity(udp_file=f'./data/{TEST}output_udp.csv'):
     """
     Calculate pathway activities using Bayesian UDP propagation.
     
     Args:
         udp_file: path to UDP values CSV
-        cpd_activation: CPD weight for activation interactions
-        cpd_inhibition: CPD weight for inhibition interactions
-        cpd_baseline: baseline probability
     """
     # Load UDP values
     """Load precomputed UDP values from udp.py output"""
@@ -196,14 +196,7 @@ def calc_activity(udp_file=f'./data/{TEST}output_udp.csv',
         if pathway not in pathway_interactions:
             pathway_interactions[pathway] = []
         pathway_interactions[pathway].append((sources, inttype, targets))
-    
-    # CPD parameters
-    cpd_params = {
-        'activation': cpd_activation,
-        'inhibition': cpd_inhibition,
-        'baseline': cpd_baseline
-    }
-    
+       
     # Initialize storage
     pathway_activities = {pathway: [] for pathway in pathway_interactions.keys()}
     n_samples = len(udp_df.columns)
@@ -221,8 +214,7 @@ def calc_activity(udp_file=f'./data/{TEST}output_udp.csv',
                 print(f"Warning: Sample {sample_name} not found in UDP file")
                 sample_udp = {}
             
-            sample_args.append((idx, sample_udp, sample_name, 
-                              pathway_interactions, cpd_params))
+            sample_args.append((idx, sample_udp, pathway_interactions))
         
         futures = [executor.submit(process_sample, arg) for arg in sample_args]
         
