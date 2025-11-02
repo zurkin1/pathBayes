@@ -11,9 +11,9 @@ if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 TEST = 'test_'
 UDP_WEIGHT=0.5 #Equal balance (recommended default).
-CPD_ACTIVATION=0.85 #CPD weight for activation interactions.
-CPD_INHIBITION=0.15 #CPD weight for inhibition interactions.
-CPD_BASELINE=0.1 #Baseline probability.
+CPT_ACTIVATION=0.85 #CPT weight for activation interactions. Conditional Probabilty Table.
+CPT_INHIBITION=0.15 #CPT weight for inhibition interactions.
+CPT_BASELINE=0.1 #Baseline probability.
 
 
 def is_inhibitory(interaction_type):
@@ -60,15 +60,15 @@ def compute_message(sources, inttype, beliefs):
     # captures "at least one input succeeds" logic common in signaling pathways.
     combined = 1.0 - np.prod([1.0 - b for b in source_beliefs])
     
-    # Apply CPD weight based on interaction type
+    # Apply CPT weight based on interaction type
     if is_inhibitory(inttype):
         # For inhibition: high input → low output
         # P(output=Up | inhibited) = baseline * (1 - combined)
-        message = CPD_INHIBITION * (1.0 - combined)
+        message = CPT_INHIBITION * (1.0 - combined)
     else:
         # For activation: high input → high output
         # P(output=Up | activated) = baseline + weight * combined
-        message = CPD_BASELINE + CPD_ACTIVATION * combined
+        message = CPT_BASELINE + CPT_ACTIVATION * combined
     
     return np.clip(message, 0.0, 1.0)
 
