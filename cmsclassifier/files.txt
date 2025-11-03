@@ -1,0 +1,50 @@
+Supplementary Text and Figures
+Supplementary Figures 1–13 (PDF 5271 kb)
+
+Supplementary Table 1
+Summary of individual groups subtyping strategy (XLSX 17 kb)
+
+Supplementary Table 2
+Summary of clinical, pathological and molecular associations of individual groups' subtypes (XLSX 17 kb)
+
+Supplementary Table 3
+Data sets and variables used for correlative analyses (XLSX 19 kb)
+
+Supplementary Table 4
+Report of Random Forest CMS classifier during training and validation steps (XLSX 11 kb)
+
+Supplementary Table 5
+Clinicopathological and molecular associations of CMS groups (XLSX 24 kb)
+
+Supplementary Table 6
+Adjusted P values for enrichment in selected copy number counts across CMS groups (XLSX 15 kb)
+
+Supplementary Table 7
+Adjusted P values for enrichment in reverse-phase protein array measurements across CMS groups (XLSX 21 kb)
+
+Supplementary Table 8
+Adjusted P values for enrichment in cancer drivers mutations across CMS groups (XLSX 22 kb)
+
+Supplementary Table 9
+Adjusted P values for gene set mRNA enrichment analysis (XLSX 20 kb)
+
+Supplementary Table 10
+Comparison of TCGA proteomic subtypes and CMS groups (XLSX 11 kb)
+
+Supplementary Table 11
+Adjusted P values for gene set protein enrichment analysis (XLSX 18 kb)
+
+Supplementary Table 12
+Differential microRNA expression levels across CMS groups (XLSX 53 kb)
+
+Supplementary Table 13
+Univariate and multivariate survival models (XLSX 19 kb)
+
+Supplementary Table 14
+Major clinicopathological and molecular features of classified and undeterminate samples (XLSX 15 kb)
+
+Supplementary Table 15
+Major clinicopathological and molecular features of samples with network labels (consensus samples) versus samples with classifier labels (non-consensus classified samples) for each CMS group (XLSX 18 kb)
+
+Supplementary Table 16
+Final performance metrics of CMS classifiers (Random Forest and Single Sample Predictor) applied to consensus samples (XLSX 13 kb)
