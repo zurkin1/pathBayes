@@ -2,18 +2,7 @@ import pandas as pd
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import os
-import sys
-
-
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-os.chdir(CURRENT_DIR)
-if CURRENT_DIR not in sys.path:
-    sys.path.insert(0, CURRENT_DIR)
-TEST = 'test_'
-UDP_WEIGHT=0.5 #Equal balance (recommended default).
-CPT_ACTIVATION=0.85 #CPT weight for activation interactions. Conditional Probabilty Table.
-CPT_INHIBITION=0.15 #CPT weight for inhibition interactions.
-CPT_BASELINE=0.1 #Baseline probability.
+from config import *
 
 
 def is_inhibitory(interaction_type):
@@ -244,8 +233,9 @@ def calc_activity(udp_file=f'./data/{TEST}output_udp.csv'):
     ).T
     
     # Save results
-    activity_df.T.to_csv(f'./data/{TEST}output_activity_lbp.csv')
-    print(f"\nSaved activity matrix to ./data/{TEST}output_activity_lbp.csv")
+    activity_df = activity_df.round(3)
+    activity_df.T.to_csv(f'./data/{TEST}output_activity.csv')
+    print(f"\nSaved activity matrix to ./data/{TEST}output_activity.csv")
     
     return activity_df
 

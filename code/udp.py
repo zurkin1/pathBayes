@@ -1,9 +1,11 @@
-# Fitting various statistical distributions to either microarray or RNAseq data.
-# In general continous distributions have a fit function, and so we use it to fit the data.
-# From documentation, it is 'maximum likelihood estimation of distribution parameters, including location
-# and scale'.
-# Discrete distributions don't have a fit function hence we use either a closed form formula
-# For maximum likelihood or an iterative optimization process.
+'''
+Fitting various statistical distributions to either microarray or RNAseq data.
+scipy continous distributions have a fit function, and so we use it to fit the data.
+using 'maximum likelihood estimation of distribution parameters, including location
+and scale'.
+Discrete distributions don't have a fit function hence we use either a closed form formula
+for maximum likelihood or an iterative optimization process.
+'''
 import numpy as np
 import pandas as pd
 from scipy.special import gammaln, psi, factorial
@@ -13,19 +15,11 @@ from sklearn.mixture import GaussianMixture as GMM
 from numpy import inf
 import time
 import multiprocessing as mp
-import sys
-import os
+from config import *
+from tqdm import tqdm
 
 
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-os.chdir(CURRENT_DIR)
-if CURRENT_DIR not in sys.path:
-    sys.path.insert(0, CURRENT_DIR)
-
-
-infinitesimal = np.finfo(float).eps
-relative_path = './data/'
-
+tqdm.pandas(desc="Processing rows")
 
 def log_likelihood_nb(params, *args):
     r, p = params
@@ -89,28 +83,26 @@ def nbfit(X):
     return {'size': params[0], 'prob': params[1]} # , 'f_value': f_value, 'warn': warn, 'aic':aic}
 
 
-# Calculate UDP for each pair of probe,sample. UDP is the probability of the higher Normal distribution.
-def calc_udp_nbm(data, aic_test=False):
-    my_udp = np.empty((0, len(data.columns)))
-    aic = 0
-    for index, row in data.iterrows():
-        #row = row.astype(int).values
-        # Remove outliers
-        if (np.count_nonzero(row) < 10): # (row == 0).all() or np.sum(row)<200 or max(row) < 5
-            my_udp = np.append(my_udp, [np.zeros(len(data.columns))], axis=0)
-            continue
-        pos = np.argsort(row.values)
-        row.iloc[pos[-3]] = row.iloc[pos[-2]] = row.iloc[pos[-1]] = row.iloc[pos[-4]]
-        res = nbfit(row)
-        size = res['size']
-        prob = res['prob']
-        row_probs = nbinom.cdf(row, size, prob)
-        my_udp = np.append(my_udp, [row_probs], axis=0)
-        if(aic_test):
-            row[row == 0] = 1
-            LogLik = (np.log(nbinom.pmf(row, size, prob) + infinitesimal)).sum()
-            aic += (2 * 2 - 2 * LogLik) / 1000 # (-log_likelihood((size, prob), row))
-    return (pd.DataFrame(data=my_udp, index=data.index, columns=data.columns)), aic
+# Calculate UDP for a dataframe of samples. UDP is the probability of the higher Normal distribution.
+def calc_udp_nbm(row):
+    aic_test=False
+    # Remove outliers
+    if (np.count_nonzero(row) < 10): # (row == 0).all() or np.sum(row)<200 or max(row) < 5
+        return np.zeros(len(row))
+
+    pos = np.argsort(row.values)
+    row.iloc[pos[-3]] = row.iloc[pos[-2]] = row.iloc[pos[-1]] = row.iloc[pos[-4]]
+    res = nbfit(row)
+    size = res['size']
+    prob = res['prob']
+    row_probs = nbinom.cdf(row, size, prob)
+
+    if(aic_test):
+        row[row == 0] = 1
+        LogLik = (np.log(nbinom.pmf(row, size, prob) + infinitesimal)).sum()
+        aic += (2 * 2 - 2 * LogLik) / 1000 # (-log_likelihood((size, prob), row))
+
+    return row_probs
 
 
 def calc_udp_gmm(data, aic_test=False):
@@ -151,7 +143,7 @@ def calc_udp_poisson(data, aic_test=False):
         # Using Stirling formula to avoid calculation of factorial.
         # logfactorial(n) = n*ln(n) - n
         n = x.size
-        logfactorial = np.log(factorial(x)) # x*np.log(x) - x #
+        logfactorial = np.log(factorial(x)) # x*np.log(x) - x
         logfactorial[logfactorial == -inf] = 0
         result =\
             - np.sum(logfactorial) \
@@ -202,45 +194,42 @@ def calc_udp_gennorm(data, aic_test=False):
     return (pd.DataFrame(data=my_udp, index=data.index, columns=data.columns)), aic
 
 
-# Read chunks of dataframe rows.
-def chunker_rows(data, size):
-    len_df = len(data)
-    return [data.iloc[pos:min(pos + size, len_df)] for pos in range(0, len_df, size)]
+def parallel_apply(df, func, n_cores=None):
+    if n_cores is None:
+        n_cores = mp.cpu_count()
+    pool = mp.Pool(n_cores)
+    results = []
+    for result in tqdm(pool.imap(func, [row for _, row in df.iterrows()]), total=len(df), desc="Processing rows"):
+        results.append(result)
+    pool.close()
+    pool.join()
+    return pd.DataFrame(results, index=df.index)
 
 
 # Run calc_udp on parallel.
-def calc_udp_multi_process():
-    data = pd.read_csv(relative_path + 'input.csv', index_col=0)
-    relations = pd.read_csv(relative_path + 'pathway_relations.csv')
+def udp_main():
+    data = pd.read_csv(data_path + 'input.csv', index_col=0)
+    relations = pd.read_csv(data_path + 'pathway_relations.csv')
     relations['source'] = relations['source'].fillna('').astype(str).str.lower().str.split('*')
     genes = set(gene for gene_list in relations['source'] for gene in gene_list)
     print(time.ctime(), f'Calculate UDP')
     data = data.apply(lambda row: row.fillna(row.mean()), axis=1)
     data.index = data.index.map(str.lower)
     data = data.loc[data.index.isin(genes)]
-    if data.max().max() < 20:
+    if data.max().max() < 25:
         data = 2 ** data
+    data = data.round(3)
     #func = calc_udp_gmm #Microarray
-    func = calc_udp_nbm #calc_udp_poisson #RNASeq
-    df = pd.DataFrame()
-    pool = mp.Pool()  # Use number of CPUs processes.
-    results = [pool.apply_async(func, args=(x,)) for x in chunker_rows(data, 700)]
-    #results = [func(x) for x in chunker_rows(data, 100)]
-    for p in results:
-        task_df, aic = p.get()
-        df = pd.concat([df, task_df]) # f.get(timeout=100)
-        print('.', end="")
-        sys.stdout.flush()
-    pool.close()
+    #func = calc_udp_nbm #calc_udp_poisson #RNASeq
+    #df = data.progress_apply(calc_udp_nbm, axis=1, result_type='expand')
+    df = parallel_apply(data, calc_udp_nbm)
+    df.columns = data.columns
+    df.index = data.index
+
     df = df.round(3)
-    df.to_csv(relative_path + 'output_udp.csv')
+    df.to_csv(data_path + 'output_udp.csv')
     print(time.ctime(), 'Done.')
-    return df
 
 
 if __name__ == '__main__':
-    #Calculate UDP.
-    #for func in [calc_udp_poisson, calc_udp_nbm, calc_udp_gmm, calc_udp_norm, calc_udp_gennorm]:
-    #    udp, aic = func(sample_data, aic_test=True)
-    #    print(f'Function: {func.__name__}, aic: {aic}')
-    calc_udp_multi_process()
+    udp_main()
