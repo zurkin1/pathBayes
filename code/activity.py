@@ -1,9 +1,7 @@
 import pandas as pd
 import numpy as np
 from config import *
-from pomegranate import DiscreteDistribution, ConditionalProbabilityTable, FactorGraph, BeliefPropagation
 import itertools
-from typing import List, Tuple, Dict
 
 
 def parse_pathway_interactions(relations_file):
@@ -37,100 +35,168 @@ def is_inhibitory(interaction_type):
     return any(keyword in interaction_type.lower() for keyword in inhibitory_keywords)
 
 
-# ----------------------------------------------------------------------
-# 2. Build a pomegranate FactorGraph for ONE pathway
-# ----------------------------------------------------------------------
-def build_pathway_factor_graph(
-    interactions: List[Tuple[List[str], str, List[str], str]],
-    evidence: Dict[str, float]
-) -> Tuple[FactorGraph, Dict[str, int]]:
-    """
-    Returns (factor_graph, node_index_map)
-    node_index_map: gene -> integer index used by pomegranate
-    """
-    # ---- collect all genes ------------------------------------------------
+def build_factor_graph_structure(interactions):
+    """Build factor graph structure with explicit interaction nodes."""
     all_genes = set()
-    for srcs, _, tgts, _ in interactions:
-        all_genes.update(srcs)
-        all_genes.update(tgts)
-    genes = sorted(all_genes)
-    n = len(genes)
-    idx = {g: i for i, g in enumerate(genes)}
-
-    # ---- create the graph ------------------------------------------------
-    fg = FactorGraph()
-
-    # ---- prior distributions (evidence) ----------------------------------
-    for gene in genes:
-        p1 = evidence.get(gene, 0.5)               # P(active=1)
-        dist = DiscreteDistribution({0: 1.0 - p1, 1: p1})
-        fg.add_node(dist, name=gene)
-
-    # ---- interaction factors (noisy-OR + CPT) ----------------------------
+    for src, _, tgt, _ in interactions:
+        all_genes.update(src)
+        all_genes.update(tgt)
+    
+    # Identify input vs target genes
+    target_genes = set()
+    for src, _, tgt, _ in interactions:
+        target_genes.update(tgt)
+    input_genes = all_genes - target_genes
+    
+    # Build interaction factors
+    factors = []
+    factor_id = 0
+    
     for src_list, itype, tgt_list, _ in interactions:
         is_inhib = is_inhibitory(itype)
-
+        
         for target in tgt_list:
             if not src_list:
                 continue
+                
+            src_list = list(set(src_list))
+            src_list_filtered = [s for s in src_list if s != target]
+            
+            if len(src_list_filtered) > 0:
+                factors.append({
+                    'id': f'factor_{factor_id}',
+                    'sources': src_list_filtered,
+                    'target': target,
+                    'is_inhibitory': is_inhib
+                })
+                factor_id += 1
+    
+    return all_genes, input_genes, target_genes, factors
 
-            src_idxs = [idx[s] for s in src_list]
-            tgt_idx = idx[target]
 
-            # Build CPT: every combination of source states → P(target)
-            table = []
-            for assignment in itertools.product([0, 1], repeat=len(src_list)):
-                combined = 1.0 - np.prod([1.0 - s for s in assignment])   # noisy-OR
+def compute_factor_output(source_beliefs, is_inhibitory):
+    """Compute output of a factor given source beliefs."""
+    # Noisy-OR combination of sources
+    combined = 1.0 - np.prod([1.0 - b for b in source_beliefs])
+    
+    # Apply CPT
+    if is_inhibitory:
+        output = CPT_BASELINE * (1.0 - CPT_INHIBITION * combined)
+    else:
+        output = CPT_BASELINE + CPT_ACTIVATION * combined
+    
+    return np.clip(output, 0.0, 1.0)
 
-                if is_inhib:
-                    out = CPT_BASELINE * (1.0 - CPT_INHIBITION * combined)
+
+def belief_propagation_factor_graph(all_genes, input_genes, factors, initial_beliefs,
+                                    max_iter=30, tolerance=1e-3):
+    """
+    Run belief propagation on factor graph with explicit interaction nodes.
+    
+    Factor graph structure:
+    - Gene nodes: all genes
+    - Factor nodes: one per interaction
+    - Messages: gene->factor, factor->gene
+    """
+    # Initialize beliefs
+    beliefs = {g: initial_beliefs.get(g, 0.5) for g in all_genes}
+    
+    # Initialize messages
+    # gene_to_factor[gene][factor_id] = message
+    # factor_to_gene[factor_id] = message to target gene
+    gene_to_factor = {g: {} for g in all_genes}
+    factor_to_gene = {f['id']: 0.5 for f in factors}
+    
+    # Build reverse index: which factors does each gene send to?
+    gene_sends_to_factors = {g: [] for g in all_genes}
+    for factor in factors:
+        for src in factor['sources']:
+            gene_sends_to_factors[src].append(factor['id'])
+    
+    # Build index: which factors send to each gene?
+    gene_receives_from_factors = {g: [] for g in all_genes}
+    for factor in factors:
+        gene_receives_from_factors[factor['target']].append(factor['id'])
+    
+    # Main BP loop
+    for iteration in range(max_iter):
+        old_beliefs = beliefs.copy()
+        
+        # PHASE 1: Gene to Factor messages
+        for gene in all_genes:
+            for factor_id in gene_sends_to_factors[gene]:
+                if gene in input_genes:
+                    # Input genes always send their prior
+                    gene_to_factor[gene][factor_id] = initial_beliefs.get(gene, 0.5)
                 else:
-                    out = CPT_BASELINE + CPT_ACTIVATION * combined
-                out = np.clip(out, 0.0, 1.0)
+                    # Non-input genes: combine incoming messages from OTHER factors
+                    incoming = [factor_to_gene[f] for f in gene_receives_from_factors[gene]]
+                    if incoming:
+                        # Product of incoming factor messages with prior
+                        msg = np.prod(incoming) * initial_beliefs.get(gene, 0.5)
+                        gene_to_factor[gene][factor_id] = np.clip(msg, 0.0, 1.0)
+                    else:
+                        gene_to_factor[gene][factor_id] = initial_beliefs.get(gene, 0.5)
+        
+        # PHASE 2: Factor to Gene messages
+        for factor in factors:
+            # Collect messages from source genes
+            source_beliefs = [gene_to_factor[src].get(factor['id'], beliefs[src]) 
+                             for src in factor['sources']]
+            
+            # Compute factor output
+            output = compute_factor_output(source_beliefs, factor['is_inhibitory'])
+            factor_to_gene[factor['id']] = output
+        
+        # PHASE 3: Update gene beliefs
+        for gene in all_genes:
+            if gene in input_genes:
+                # Input genes keep their prior
+                beliefs[gene] = initial_beliefs.get(gene, 0.5)
+            else:
+                # Target genes: combine all incoming factor messages
+                incoming = [factor_to_gene[f] for f in gene_receives_from_factors[gene]]
+                
+                if incoming:
+                    # Product of factor messages with prior
+                    prior = initial_beliefs.get(gene, 0.5)
+                    combined = np.prod(incoming) * prior
+                    beliefs[gene] = np.clip(combined, 0.0, 1.0)
+                else:
+                    # No incoming factors (shouldn't happen for target genes)
+                    beliefs[gene] = initial_beliefs.get(gene, 0.5)
+        
+        # Check convergence
+        max_change = max(abs(beliefs[g] - old_beliefs[g]) for g in all_genes)
+        if max_change < tolerance:
+            break
+    
+    return beliefs
 
-                # P(target=0) and P(target=1)
-                table.append([*assignment, 0, 1.0 - out])
-                table.append([*assignment, 1, out])
 
-            # pomegranate expects variables in the *same* order as the table
-            vars_in_order = src_idxs + [tgt_idx]
-            cpt = ConditionalProbabilityTable(table, [fg.nodes[i] for i in src_idxs])
-            fg.add_factor(cpt, connects=vars_in_order)
-
-    return fg, idx
-
-
-# ----------------------------------------------------------------------
-# 3. Process ONE sample
-# ----------------------------------------------------------------------
-def process_sample(sample_udp: pd.Series) -> Dict[str, float]:
-    pathway_activities: Dict[str, float] = {}
-
+def process_sample(sample_udp: pd.Series) -> dict[str, float]:
+    """Process a single sample and return pathway activities."""
+    pathway_activities = {}
+    
     for pathway, interactions in pathway_interactions.items():
-        # ---- evidence (gene → P(active)) ---------------------------------
-        all_genes = {g for srcs, _, tgts, _ in interactions
-                     for g in srcs + tgts}
-        evidence = {g: sample_udp.get(g, 0.5) for g in all_genes}
-
+        # Build factor graph structure
+        all_genes, input_genes, target_genes, factors = build_factor_graph_structure(interactions)
+        
         if not all_genes:
             pathway_activities[pathway] = 0.5
             continue
-
-        # ---- build graph --------------------------------------------------
-        fg, node_idx = build_pathway_factor_graph(interactions, evidence)
-
-        # ---- loopy BP -----------------------------------------------------
-        bp = BeliefPropagation(fg)
-        bp.loopy(max_iterations=30, tolerance=1e-3)
-
-        # ---- marginals ----------------------------------------------------
-        marginals = {
-            gene: bp.belief(node_idx[gene])[1]      # P(gene=1)
-            for gene in all_genes
-        }
-
-        pathway_activities[pathway] = float(np.mean(list(marginals.values())))
-
+        
+        # Get priors for this sample
+        initial_beliefs = {g: sample_udp.get(g, 0.5) for g in all_genes}
+        
+        # Run belief propagation
+        final_beliefs = belief_propagation_factor_graph(
+            all_genes, input_genes, factors, initial_beliefs
+        )
+        
+        # Compute pathway activity
+        pathway_activities[pathway] = float(np.mean(list(final_beliefs.values())))
+    
     return pathway_activities
 
 
