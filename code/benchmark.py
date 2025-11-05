@@ -117,10 +117,10 @@ def select_cms_relevant_pathways(activity_df):
     
     selected_pathways = activity_df[selected_mask]
     
-    print(f"\nSelected {len(selected_pathways)} CMS-relevant pathways from {len(activity_df)}")
-    print("Sample pathways:")
-    for i, p in enumerate(selected_pathways.index[:10]):
-        print(f"  {i+1}. {p}")
+    print(f"Selected {len(selected_pathways)} CMS-relevant pathways from {len(activity_df)}")
+    #print("Sample pathways:")
+    #for i, p in enumerate(selected_pathways.index[:10]):
+    #    print(f"  {i+1}. {p}")
     
     return selected_pathways.T
 
@@ -167,22 +167,16 @@ def calculate_metrics(y_true, y_pred):
 
 
 if __name__ == "__main__":
-    """Main benchmark pipeline"""
-    
-    print("PathBayes CRC TCGA Benchmark")
-    print("="*80)
-    
+    """Main benchmark pipeline"""   
     # 1. Load data
-    expr_data, y_true = load_tcga_data(
-        expression_file=data_path+'TCGACRC_expression-merged.zip',
-        labels_file=data_path+'TCGACRC_clinical-merged.csv'
-    )
+    expression_file=data_path+'TCGACRC_expression-merged.zip'
+    expr_data, y_true = load_tcga_data(expression_file=expression_file, labels_file=data_path+'TCGACRC_clinical-merged.csv')
     
     # 2. Calculate UDP
     #udp_df = calculate_udp(expr_data)
     
     # 3. Calculate activity
-    #activity = calc_activity()
+    #activity = calc_activity(expression_file)
     activity = pd.read_csv(data_path+'output_activity.csv', index_col=0) # (samples (rows) × pathways (columns)) activity.shape = 472 x 314
     common_samples = list(set(activity.index) & set(y_true.index)) 
     y_true = y_true[y_true.index.isin(common_samples)]
@@ -201,20 +195,17 @@ if __name__ == "__main__":
     #print(f"PCA explained variance ratio: {pca.explained_variance_ratio_.sum():.3f}")
        
     # 6. Cluster with KMeans (4 clusters for CMS1-4)
-    print("\nClustering with KMeans (k=3)...")
+    #print("Clustering with KMeans (k=3)...")
     # Convert labels to numeric for metrics
     label_map = {label: index for index, label in enumerate(labels)}
     index_map = {index: label for index, label in enumerate(labels)}
     y_true_numeric = np.array([label_map[label] for label in y_true.values])
     kmeans = cluster_with_kmeans(activity, n_clusters=3)
     y_pred_kmeans = kmeans.labels_
-    print(f"KMeans clustering complete. Predicted clusters: {len(y_pred_kmeans)}, values: {np.unique(y_pred_kmeans)}")
+    #print(f"KMeans clustering complete. Predicted clusters: {len(y_pred_kmeans)}, values: {np.unique(y_pred_kmeans)}")
     
     # 7. Calculate clustering metrics
-    print("\n" + "="*80)
-    print("CLUSTERING METRICS (Unsupervised)")
-    print("="*80)
-    
+    #print("="*80)   
     silhouette, calinski, special_acc, completeness, homogeneity, adjusted_mi = calc_stats(
         activity, 
         y_true_numeric, 

@@ -1,12 +1,12 @@
 import numpy as np
-from sklearn.metrics import silhouette_score, calinski_harabasz_score, completeness_score, homogeneity_score, adjusted_mutual_info_score
+from sklearn.metrics import silhouette_score, calinski_harabasz_score, completeness_score, homogeneity_score, adjusted_mutual_info_score, adjusted_rand_score, normalized_mutual_info_score
 from scipy.spatial.distance import pdist, squareform
 from scipy.optimize import linear_sum_assignment
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from tqdm.notebook import tqdm
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, SpectralClustering
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.feature_selection import VarianceThreshold
 import scipy
@@ -88,24 +88,26 @@ def acc(y_true, y_pred):
     return sum(w[ind[0], ind[1]]) * 1.0 / y_pred.size
 
 
-def calc_stats(act_mat, true_labels, kmeans_labels, debug=False):
+def calc_stats(act_mat, true_labels, pred_labels, debug=False):
     #Silhouette score.
-    Silhouette = silhouette_score(act_mat, kmeans_labels, metric='euclidean')
+    Silhouette = silhouette_score(act_mat, pred_labels, metric='euclidean')
 
     #Calinski-Harabasz index.
-    Calinski = calinski_harabasz_score(act_mat, kmeans_labels)
+    Calinski = calinski_harabasz_score(act_mat, pred_labels)
 
     #Special accuracy function.
-    Special = acc(true_labels, kmeans_labels)
+    Special = acc(true_labels, pred_labels)
 
     #Completeness score.
-    Completeness =  completeness_score(true_labels, kmeans_labels)
+    Completeness =  completeness_score(true_labels, pred_labels)
 
     #Homogeneity_score.
-    Homogeneity = homogeneity_score(true_labels, kmeans_labels)
+    Homogeneity = homogeneity_score(true_labels, pred_labels)
 
     #Adjusted_mutual_info_scor
-    Adjusted = adjusted_mutual_info_score(true_labels, kmeans_labels)
+    Adjusted = adjusted_mutual_info_score(true_labels, pred_labels)
+    ari = adjusted_rand_score(true_labels, pred_labels)
+    nmi = normalized_mutual_info_score(true_labels, pred_labels)
 
     if debug:
         print(f"Silhouette Score: {Silhouette}")
@@ -113,7 +115,9 @@ def calc_stats(act_mat, true_labels, kmeans_labels, debug=False):
         print(f"Special accuracy: {Special}")
         print(f'completeness score: {Completeness}')
         print(f"homogeneity_score: {Homogeneity}")
-        print(f"adjusted_mutual_info_score: {Adjusted}\n")
+        print(f"adjusted_mutual_info_score: {Adjusted}")
+        print(f"adjusted_rand_score: {ari}")
+        print(f"normalized_mutual_info_score: {nmi}")
 
     return Silhouette, Calinski, Special, Completeness, Homogeneity, Adjusted
 
@@ -156,8 +160,9 @@ def feature_importance(scores_df, true_labels):
 
 def cluster_with_kmeans(results_matrix, n_clusters=3):
     #Perform KMeans clustering.
-    kmeans = KMeans(n_clusters).fit(results_matrix)
-    return kmeans
+    #model = KMeans(n_clusters).fit(results_matrix)
+    model = SpectralClustering(n_clusters=n_clusters, affinity='nearest_neighbors', random_state=42).fit(results_matrix)
+    return model
 
 def gaussian_scaling(p, q, sigma=0.5):
     """Calculate the scaled activity of inputs (p) of an interaction by the outputs (q).
