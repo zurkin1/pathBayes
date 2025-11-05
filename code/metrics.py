@@ -154,7 +154,7 @@ def feature_importance(scores_df, true_labels):
         for pathway, accuracy in sorted_genesets[:40]:
             print(f'Pathway set: {pathway}')
 
-def cluster_with_kmeans(results_matrix, n_clusters=4):
+def cluster_with_kmeans(results_matrix, n_clusters=3):
     #Perform KMeans clustering.
     kmeans = KMeans(n_clusters).fit(results_matrix)
     return kmeans

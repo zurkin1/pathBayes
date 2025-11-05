@@ -194,18 +194,6 @@ def calc_udp_gennorm(data, aic_test=False):
     return (pd.DataFrame(data=my_udp, index=data.index, columns=data.columns)), aic
 
 
-def parallel_apply(df, func, n_cores=None):
-    if n_cores is None:
-        n_cores = mp.cpu_count()
-    pool = mp.Pool(n_cores)
-    results = []
-    for result in tqdm(pool.imap(func, [row for _, row in df.iterrows()]), total=len(df), desc="Processing rows"):
-        results.append(result)
-    pool.close()
-    pool.join()
-    return pd.DataFrame(results, index=df.index)
-
-
 # Run calc_udp on parallel.
 def udp_main():
     data = pd.read_csv(data_path + 'input.csv', index_col=0)

@@ -1,241 +1,224 @@
 import pandas as pd
 import numpy as np
-from concurrent.futures import ProcessPoolExecutor, as_completed
-import os
 from config import *
 
 
+def parse_pathway_interactions(relations_file):
+    """Loads and parses pathway relations into a dict."""
+    pathway_relations = pd.read_csv(relations_file)
+    pathway_relations['source'] = pathway_relations['source'].fillna('').astype(str).str.lower().str.split('*')
+    pathway_relations['target'] = pathway_relations['target'].fillna('').astype(str).str.lower().str.split('*')
+    
+    # Group interactions by pathway
+    interactions_by_pathway = {}
+    for _, row in pathway_relations.iterrows():
+        pathway = row['pathway']
+        if pathway not in interactions_by_pathway:
+            interactions_by_pathway[pathway] = []
+        
+        interactions_by_pathway[pathway].append(
+            (row['source'], row['interactiontype'], row['target'], pathway)
+        )
+    
+    return interactions_by_pathway, list(interactions_by_pathway.keys())
+
+
+# Load and parse interactions into simple data structures
+pathway_interactions, pathway_names = parse_pathway_interactions(f'./data/{TEST}pathway_relations.csv')
+
+
 def is_inhibitory(interaction_type):
-    inhibitory_keywords = ['inhibition', 'repression', 'dissociation', 'dephosphorylation', 'ubiquitination']
-    return any(keyword in interaction_type for keyword in inhibitory_keywords)
+    """Check if interaction type is inhibitory"""
+    inhibitory_keywords = ['inhibition', 'repression', 'dissociation',
+                           'dephosphorylation', 'ubiquitination']
+    return any(keyword in interaction_type.lower() for keyword in inhibitory_keywords)
 
 
-def get_pathway_genes(interactions):
-    """Extract all unique genes from pathway interactions"""
-    genes = set()
-    for sources, _, targets in interactions:
-        genes.update(sources)
-        genes.update(targets)
-    return genes
-
-
-def get_gene_parents(gene, interactions):
-    """Get all source genes that have this gene as target"""
-    parents = []
-    for sources, inttype, targets in interactions:
-        if gene in targets:
-            parents.append((sources, inttype))
-    return parents
-
-
-def compute_message(sources, inttype, beliefs):
+def create_interaction_factor(sources, is_inhib):
     """
-    Compute message from source genes through an interaction.
-    
-    Args:
-        sources: list of source gene names
-        inttype: interaction type string
-        beliefs: dict of current belief values {gene: probability_up}
-    
-    Returns:
-        message: probability value representing combined input
+    Create a factor function representing an interaction.
+    Pre-calculates inhibition status.
     """
-    # Collect beliefs of source genes
-    source_beliefs = [beliefs.get(gene, 0.5) for gene in sources]
+    def factor_function(source_beliefs):
+        """
+        Compute interaction output given source beliefs.
+        Args:
+            source_beliefs: dict {gene_name: belief_value}
+        Returns:
+            probability value for target
+        """
+        beliefs = [source_beliefs.get(gene, 0.5) for gene in sources]
+        
+        # Combine sources using noisy-OR
+        combined = 1.0 - np.prod([1.0 - b for b in beliefs])
+        
+        # Apply CPT based on interaction type
+        if is_inhib:
+            # Inhibition: high input → low output
+            output = CPT_BASELINE * (1.0 - CPT_INHIBITION * combined)
+        else:
+            # Activation: high input → high output
+            output = CPT_BASELINE + CPT_ACTIVATION * combined
+        
+        return np.clip(output, 0.0, 1.0)
     
-    # Combine multiple inputs using noisy-OR for activation. P(output=Up) = 1 - prod(1 - P(source_i=Up)). Noisy-OR is a probabilistic model for combining multiple binary
-    # causes leading to an effect. If any parent is "Up", the child tends to be "Up" with high probability. Formula: P(child=Up) = 1 - ∏(1 - P(parent_i=Up)).
-    # It's computationally efficient and biologically realistic - multiple promoters can independently activate a target. Alternative is weighted sum, but noisy-OR better
-    # captures "at least one input succeeds" logic common in signaling pathways.
-    combined = 1.0 - np.prod([1.0 - b for b in source_beliefs])
-    
-    # Apply CPT weight based on interaction type
-    if is_inhibitory(inttype):
-        # For inhibition: high input → low output
-        # P(output=Up | inhibited) = baseline * (1 - combined)
-        message = CPT_INHIBITION * (1.0 - combined)
-    else:
-        # For activation: high input → high output
-        # P(output=Up | activated) = baseline + weight * combined
-        message = CPT_BASELINE + CPT_ACTIVATION * combined
-    
-    return np.clip(message, 0.0, 1.0)
+    return factor_function
 
 
-def loopy_belief_propagation(interactions, initial_beliefs, max_iterations=30, tolerance=1e-3):
+def build_factor_graph(interactions):
     """
-    Run Loopy Belief Propagation on pathway network.
-    
-    Args:
-        interactions: list of (sources, inttype, targets) tuples
-        initial_beliefs: dict of {gene: udp_value} for input genes
-        max_iterations: maximum number of LBP iterations
-        tolerance: convergence threshold
-    
-    Returns:
-        beliefs: dict of final belief values {gene: probability_up}
+    Build a factor graph structure from pathway interactions.
     """
-    # Get all genes in pathway
-    all_genes = get_pathway_genes(interactions)
+    all_genes = set()
+    gene_to_factors = {}
+    factor_to_genes = {}
+    factor_functions = {}
     
-    # Initialize beliefs
+    for sources, _, targets, _ in interactions:
+        all_genes.update(sources)
+        all_genes.update(targets)
+
+    for gene in all_genes:
+        gene_to_factors[gene] = []
+
+    for idx, (sources, inttype, targets, pathway) in enumerate(interactions):
+        interaction_id = f"interaction_{idx}"
+        is_inhib = is_inhibitory(inttype)
+        
+        for target in targets:
+            factor_id = f"{interaction_id}_{target}"
+            
+            factor_to_genes[factor_id] = {'sources': sources, 'target': target}
+            gene_to_factors[target].append(factor_id)
+            factor_functions[factor_id] = create_interaction_factor(sources, is_inhib)
+    
+    return all_genes, gene_to_factors, factor_to_genes, factor_functions
+
+
+def loopy_belief_propagation_manual(all_genes, gene_to_factors, factor_to_genes,
+                                    factor_functions, initial_beliefs,
+                                    max_iterations=30, tolerance=1e-3):
+    """
+    Manual belief propagation treating interactions as explicit factors.
+    """
     beliefs = {gene: initial_beliefs.get(gene, 0.5) for gene in all_genes}
     
-    # Identify input genes (genes with no parents in the pathway)
-    input_genes = set()
-    target_genes = set()
-    for sources, _, targets in interactions:
-        target_genes.update(targets)
+    target_genes = {info['target'] for info in factor_to_genes.values()}
     input_genes = all_genes - target_genes
     
-    # LBP iteration
+    # Initialize messages
+    factor_to_gene_msgs = {factor: {info['target']: 0.5} 
+                           for factor, info in factor_to_genes.items()}
+    gene_to_factor_msgs = {gene: {factor: beliefs[gene] 
+                                  for factor in gene_to_factors.get(gene, [])} 
+                           for gene in all_genes}
+    
     for iteration in range(max_iterations):
         old_beliefs = beliefs.copy()
-        new_beliefs = {}
         
-        # Update beliefs for all non-input genes
-        for gene in all_genes:
-            if gene in input_genes:
-                # Input genes keep their initial UDP values
-                new_beliefs[gene] = initial_beliefs.get(gene, 0.5)
-            else:
-                # Get all incoming messages from parent interactions
-                parents = get_gene_parents(gene, interactions)
-                
-                if not parents:
-                    # No parents, keep previous belief
-                    new_beliefs[gene] = old_beliefs[gene]
-                else:
-                    # Compute messages from all parent interactions
-                    messages = []
-                    for sources, inttype in parents:
-                        msg = compute_message(sources, inttype, old_beliefs)
-                        messages.append(msg)
+        # PHASE 1: Gene to Factor messages
+        for gene, factors in gene_to_factors.items():
+            if gene not in input_genes:
+                for factor in factors:
+                    other_msgs = [factor_to_gene_msgs[f][gene] 
+                                  for f in factors if f != factor]
                     
-                    # Combine messages using noisy-OR
-                    if len(messages) == 1:
-                        propagated_belief = messages[0]
-                    else:
-                        # Multiple parents: noisy-OR combination
-                        combined = 1.0 - np.prod([1.0 - m for m in messages])
-                        propagated_belief = combined
-    
-                    # Combine propagated belief with original UDP value.
-                    original_udp = initial_beliefs.get(gene, 0.5)
-                    new_beliefs[gene] = (UDP_WEIGHT * original_udp + 
-                                        (1 - UDP_WEIGHT) * propagated_belief)
+                    msg = np.prod(other_msgs) if other_msgs else 1.0
+                    msg *= initial_beliefs.get(gene, 0.5)
+                    gene_to_factor_msgs[gene][factor] = np.clip(msg, 0.0, 1.0)
         
-        beliefs = new_beliefs
+        # PHASE 2: Factor to Gene messages
+        for factor_id, info in factor_to_genes.items():
+            sources = info['sources']
+            target = info['target']
+            
+            source_beliefs = {s: gene_to_factor_msgs[s].get(factor_id, beliefs[s]) 
+                              for s in sources}
+            
+            factor_to_gene_msgs[factor_id][target] = factor_functions[factor_id](source_beliefs)
+        
+        # PHASE 3: Update gene beliefs
+        for gene in all_genes:
+            if gene not in input_genes:
+                incoming = [factor_to_gene_msgs[f][gene] 
+                            for f in gene_to_factors[gene]]
+                
+                if incoming:
+                    combined = np.prod(incoming) * initial_beliefs.get(gene, 0.5)
+                    beliefs[gene] = np.clip(combined, 0.0, 1.0)
+            else:
+                beliefs[gene] = initial_beliefs.get(gene, 0.5) # Input genes stay fixed
         
         # Check convergence
-        max_change = max(abs(beliefs[g] - old_beliefs[g]) for g in all_genes)
-        if max_change < tolerance:
-            break
+        if all_genes: # Avoid error on empty pathways
+            max_change = max(abs(beliefs[g] - old_beliefs[g]) for g in all_genes)
+            if max_change < tolerance:
+                break
     
     return beliefs
 
 
-def process_sample(args):
-    """Process all pathways for a single sample with LBP"""
-    sample_idx, sample_udp, pathway_interactions = args
+def process_sample(sample_udp):
+    """Process a single sample with factor graph BP"""
     pathway_activities = {}
-    pathway_beliefs = {}
     
     for pathway, interactions in pathway_interactions.items():
-        # Get UDP values for this sample
-        pathway_genes = get_pathway_genes(interactions)
-        initial_beliefs = {gene: sample_udp.get(gene, 0.5) for gene in pathway_genes}
+        # Build factor graph structure *within the worker*
+        all_genes, gene_to_factors, factor_to_genes, factor_functions = build_factor_graph(interactions)
         
-        # Run LBP
-        final_beliefs = loopy_belief_propagation(interactions, initial_beliefs)
+        initial_beliefs = {gene: sample_udp.get(gene, 0.5) for gene in all_genes}
         
-        # Calculate pathway activity as mean of all gene beliefs
-        pathway_activity = np.mean(list(final_beliefs.values()))
+        final_beliefs = loopy_belief_propagation_manual(
+            all_genes, gene_to_factors, factor_to_genes, factor_functions,
+            initial_beliefs
+        )
         
+        # Calculate pathway activity as mean belief
+        if final_beliefs:
+            pathway_activity = np.mean(list(final_beliefs.values()))
+        else:
+            pathway_activity = 0.5 # Default for empty pathway
         pathway_activities[pathway] = pathway_activity
-        pathway_beliefs[pathway] = final_beliefs
     
-    return sample_idx, pathway_activities, pathway_beliefs
+    return pathway_activities
 
 
-def calc_activity(udp_file=f'./data/{TEST}output_udp.csv'):
+def calc_activity(udp_file=f'./data/{TEST}output_udp.csv',
+                  output_file=f'./data/{TEST}output_activity.csv'):
     """
-    Calculate pathway activities using Bayesian UDP propagation.
-    
-    Args:
-        udp_file: path to UDP values CSV
-    """
+    Calculate pathway activities using factor graph belief propagation
+    and the parallel_apply function.
+    """   
     # Load UDP values
-    """Load precomputed UDP values from udp.py output"""
     udp_df = pd.read_csv(udp_file, index_col=0)
     udp_df.index = udp_df.index.str.lower()
-   
-    # Load pathway relations
-    pathway_relations = pd.read_csv(f'./data/{TEST}pathway_relations.csv')
-    pathway_relations['source'] = pathway_relations['source'].fillna('').astype(str).str.lower().str.split('*')
-    pathway_relations['target'] = pathway_relations['target'].fillna('').astype(str).str.lower().str.split('*')
+
+    # 1. Create a 'func' for parallel_apply
+    func_to_apply = process_sample
     
-    # Parse pathway interactions
-    pathway_interactions = {}
-    for _, row in pathway_relations.iterrows():
-        pathway = row['pathway']
-        sources = row['source']
-        targets = row['target']
-        inttype = row['interactiontype']
-        if pathway not in pathway_interactions:
-            pathway_interactions[pathway] = []
-        pathway_interactions[pathway].append((sources, inttype, targets))
-       
-    # Initialize storage
-    pathway_activities = {pathway: [] for pathway in pathway_interactions.keys()}
-    n_samples = len(udp_df.columns)
-    ordered_results = [None] * n_samples
+    # 2. Transpose udp_df so rows are samples, columns are genes
+    df_to_process = udp_df.T
     
-    # Process samples in parallel
-    with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
-        sample_args = []
-        for idx in range(n_samples):
-            sample_name = udp_df.columns[idx]
-            # Get UDP values for this sample
-            if sample_name in udp_df.columns:
-                sample_udp = udp_df[sample_name].to_dict()
-            else:
-                print(f"Warning: Sample {sample_name} not found in UDP file")
-                sample_udp = {}
-            
-            sample_args.append((idx, sample_udp, pathway_interactions))
-        
-        futures = [executor.submit(process_sample, arg) for arg in sample_args]
-        
-        for future in as_completed(futures):
-            idx, sample_pathway_activities, sample_pathway_beliefs = future.result()
-            ordered_results[idx] = sample_pathway_activities
-            print(f"Processed sample {idx+1}/{n_samples}", end='\r')
+    print(f"Processing {len(df_to_process)} samples via parallel_apply...")
     
-    # Collect results in order
-    for idx, sample_pathway_activities in enumerate(ordered_results):
-        for pathway, activity in sample_pathway_activities.items():
-            pathway_activities[pathway].append(activity)
+    # 3. Call parallel_apply
+    #    It will iterate over rows of df_to_process (samples)
+    #    It returns a new DataFrame where rows are samples
+    #    and columns are pathway activities
+    activity_df_T = parallel_apply(df_to_process, func_to_apply)
     
-    # Create activity matrix
-    mean_activity_matrix = np.zeros((n_samples, len(pathway_interactions)))
-    for idx, (pathway_name, activities) in enumerate(pathway_activities.items()):
-        if activities:
-            mean_activity_matrix[:, idx] = activities
-        else:
-            print(f"No activities for pathway {pathway_name}")
+    # 4. Transpose back to match original activity_df format
+    #    (rows=pathways, cols=samples)
+    activity_df = activity_df_T.T
     
-    # Create DataFrame
-    activity_df = pd.DataFrame(
-        mean_activity_matrix, 
-        index=udp_df.columns, 
-        columns=list(pathway_interactions.keys())
-    ).T
+    # --- End of new logic ---
+
+    # Reorder pathways to match original parsing
+    activity_df = activity_df.reindex(pathway_names)
     
     # Save results
-    activity_df = activity_df.round(3)
-    activity_df.T.to_csv(f'./data/{TEST}output_activity.csv')
-    print(f"\nSaved activity matrix to ./data/{TEST}output_activity.csv")
+    activity_df.T.round(3).to_csv(output_file)
+    print(f"\nSaved activity matrix to {output_file}")
     
     return activity_df
 

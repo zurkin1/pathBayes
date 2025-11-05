@@ -11,16 +11,12 @@ Additional quality control steps like outlier detection and normalization (inclu
 """
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import cross_val_predict, StratifiedKFold
 from sklearn.metrics import accuracy_score, confusion_matrix, cohen_kappa_score
-from sklearn.preprocessing import StandardScaler
 from config import *
 from activity import calc_activity
 from udp import udp_main
 from sklearn.preprocessing import Normalizer # Unit norm, row wise. # StandardScaler # Normal distribution. MinMaxScaler # [0,1] range, column wise.
 from sklearn.decomposition import PCA
-from sklearn.cluster import KMeans
 from metrics import *
 
 
@@ -31,35 +27,33 @@ def load_tcga_data(expression_file, labels_file):
     expr = pd.read_csv(expression_file, sep='\t', index_col=0)
     print(f"Expression data shape: {expr.shape}")
     
+    # Load CMS labels
+    labels = pd.read_csv(labels_file)
+    
     # Filter outliers.
     outliers = pd.read_csv(data_path+'TCGACRC_expression_merged_outlier_strict.txt')
-    outset = set(outliers.name)
+    outliers2 = set(labels.loc[pd.isna(labels["microsatelite"]) | (labels["microsatelite"] == 'Indeterminate')]['id'])
+    outset = set(outliers.name).union(outliers2)
     expr = expr.loc[:, ~expr.columns.isin(outset)]
-    
-    # Load CMS labels
-    labels = pd.read_csv(labels_file, sep='\t')
+    print(f"Expression data shape after outlier cleanup: {expr.shape}")
     
     # Filter to TCGA samples only
-    tcga_labels = labels[labels['dataset'] == 'tcga'].copy()
-    tcga_labels = tcga_labels[tcga_labels['CMS_final_network_plus_RFclassifier_in_nonconsensus_samples'] != 'NOLBL']
+    #tcga_labels = labels[labels['dataset'] == 'tcga'].copy()
+    #tcga_labels = tcga_labels[tcga_labels['CMS_final_network_plus_RFclassifier_in_nonconsensus_samples'] != 'NOLBL']
     
     # Match samples between expression and labels
-    common_samples = list(set(expr.columns) & set(tcga_labels['sample']))
-    print(f"Common samples: {len(common_samples)}")
-    
-    expr_matched = expr[common_samples]
-    labels_matched = tcga_labels[tcga_labels['sample'].isin(common_samples)].copy()
-    labels_matched.set_index('sample', inplace=True)
+    common_samples = list(set(expr.columns) & set(labels['id']))    
+    expr = expr[common_samples]
+    labels_matched = labels[labels['id'].isin(common_samples)].copy()
+    labels_matched.set_index('id', inplace=True)
     labels_matched = labels_matched.loc[common_samples] # Ensure same order
+    print(f"Expression data shape after TCGA filter: {expr.shape} (genes, samples)")
+
+    # Extract labels (final consensus)
+    #y = labels_matched['microsatelite'] #CMS_final_network_plus_RFclassifier_in_nonconsensus_samples
+    #print(pd.Series(y).value_counts().sort_index())
     
-    # Extract CMS labels (final consensus)
-    y = labels_matched['CMS_final_network_plus_RFclassifier_in_nonconsensus_samples'].values
-    
-    print(f"Final dataset: {expr_matched.shape[1]} samples × {expr_matched.shape[0]} genes")
-    print(f"CMS distribution:")
-    print(pd.Series(y).value_counts().sort_index())
-    
-    return expr_matched, y
+    return expr, labels_matched
 
 
 def calculate_udp(expr_data):
@@ -131,53 +125,45 @@ def select_cms_relevant_pathways(activity_df):
     return selected_pathways.T
 
 
-def calculate_metrics(y_true, y_pred, dataset_name='PathBayes'):
+labels = ['MSI-H', 'MSS', 'MSI-L'] #'CMS1', 'CMS2', 'CMS3', 'CMS4'
+
+
+def calculate_metrics(y_true, y_pred):
     """
     Calculate performance metrics matching Table 16 format:
     - Overall accuracy
     - Per-class accuracy (sensitivity)
     - Cohen's Kappa
     """
-    
     # Overall accuracy
-    overall_acc = accuracy_score(y_true, y_pred)
+    print(f'overall_acc: {accuracy_score(y_true, y_pred)}')
     
     # Confusion matrix
-    cm = confusion_matrix(y_true, y_pred, labels=['CMS1', 'CMS2', 'CMS3', 'CMS4'])
+    cm = confusion_matrix(y_true, y_pred, labels=labels)
     """Print confusion matrix"""
     print(f"\nconfusion matrix")
     print("-"*50)
     df_cm = pd.DataFrame(
         cm,
-        index=['CMS1', 'CMS2', 'CMS3', 'CMS4'],
-        columns=['CMS1', 'CMS2', 'CMS3', 'CMS4']
+        index=labels,
+        columns=labels
     )
     print(df_cm)
     print()
 
     # Per-class sensitivity (recall)
     class_acc = {}
-    for i, cms in enumerate(['CMS1', 'CMS2', 'CMS3', 'CMS4']):
+    for i, cms in enumerate(labels):
         if cm[i, :].sum() > 0:
             class_acc[cms] = cm[i, i] / cm[i, :].sum()
         else:
             class_acc[cms] = 0.0
+        print(f'class: {cms} acc: {class_acc[cms]}')
     
     # Cohen's Kappa
-    kappa = cohen_kappa_score(y_true, y_pred)
+    print(f'Cohen kappa: {cohen_kappa_score(y_true, y_pred):.2f}')
     
-    # Format results similar to Table 16
-    results = {
-        'Dataset': dataset_name,
-        'Overall': f"{overall_acc:.2f}",
-        'CMS1': f"{class_acc['CMS1']:.2f}",
-        'CMS2': f"{class_acc['CMS2']:.2f}",
-        'CMS3': f"{class_acc['CMS3']:.2f}",
-        'CMS4': f"{class_acc['CMS4']:.2f}",
-        'Kappa': f"{kappa:.2f}"
-    }
-    
-    return results, cm
+    return cm
 
 
 if __name__ == "__main__":
@@ -189,23 +175,25 @@ if __name__ == "__main__":
     # 1. Load data
     expr_data, y_true = load_tcga_data(
         expression_file=data_path+'TCGACRC_expression-merged.zip',
-        labels_file=data_path+'cms_labels_public_all.txt'
+        labels_file=data_path+'TCGACRC_clinical-merged.csv'
     )
     
     # 2. Calculate UDP
-    expr_data = expr_data.round(3)
     #udp_df = calculate_udp(expr_data)
     
     # 3. Calculate activity
     #activity = calc_activity()
-    activity = pd.read_csv(data_path+'output_activity.csv', index_col=0) # (samples (rows) × pathways (columns)) 472 x 314
-
+    activity = pd.read_csv(data_path+'output_activity.csv', index_col=0) # (samples (rows) × pathways (columns)) activity.shape = 472 x 314
+    common_samples = list(set(activity.index) & set(y_true.index)) 
+    y_true = y_true[y_true.index.isin(common_samples)]
+    activity = activity[activity.index.isin(common_samples)]
+    y_true = y_true['microsatelite']
     # 4. Select CMS-relevant pathways (optional - comment out to use all pathways)
     activity = select_cms_relevant_pathways(activity)
 
     # 4. Scale the data.
-    #scaler = Normalizer()
-    #activity = scaler.fit_transform(activity)
+    scaler = Normalizer()
+    activity = scaler.fit_transform(activity)
     
     # 5. Dimensionality reduction with PCA
     #pca = PCA(n_components=30, svd_solver='arpack')
@@ -213,13 +201,14 @@ if __name__ == "__main__":
     #print(f"PCA explained variance ratio: {pca.explained_variance_ratio_.sum():.3f}")
        
     # 6. Cluster with KMeans (4 clusters for CMS1-4)
-    print("\nClustering with KMeans (k=4)...")
-    # Convert CMS labels to numeric for metrics
-    cms_to_num = {'CMS1': 0, 'CMS2': 1, 'CMS3': 2, 'CMS4': 3}
-    y_true_numeric = np.array([cms_to_num[label] for label in y_true])
-    kmeans = cluster_with_kmeans(activity, n_clusters=4)
+    print("\nClustering with KMeans (k=3)...")
+    # Convert labels to numeric for metrics
+    label_map = {label: index for index, label in enumerate(labels)}
+    index_map = {index: label for index, label in enumerate(labels)}
+    y_true_numeric = np.array([label_map[label] for label in y_true.values])
+    kmeans = cluster_with_kmeans(activity, n_clusters=3)
     y_pred_kmeans = kmeans.labels_
-    print(f"KMeans clustering complete. Predicted clusters: {np.unique(y_pred_kmeans)}")
+    print(f"KMeans clustering complete. Predicted clusters: {len(y_pred_kmeans)}, values: {np.unique(y_pred_kmeans)}")
     
     # 7. Calculate clustering metrics
     print("\n" + "="*80)
@@ -234,23 +223,8 @@ if __name__ == "__main__":
     )
     
     # 8. Convert cluster labels to CMS labels for confusion matrix
-    # Map cluster assignments to CMS labels (need to find best matching)
-    num_to_cms = {0: 'CMS1', 1: 'CMS2', 2: 'CMS3', 3: 'CMS4'}
-    y_pred_cms = np.array([num_to_cms[label] for label in y_pred_kmeans])
+    # Map cluster assignments to labels (need to find best matching)
+    y_pred_cms = np.array([index_map[label] for label in y_pred_kmeans])
     
-    # Calculate metrics in CMSclassifier format
-    results_clustering, cm_clustering = calculate_metrics(
-        y_true, 
-        y_pred_cms, 
-        dataset_name='PathBayes (KMeans)'
-    )
-    
-    print("\n" + "="*80)
-    print("CLASSIFICATION METRICS (Table 16 Format - Using KMeans Clusters)")
-    print("="*80)
-    print(f"{'Dataset':<25} {'Overall':<10} {'CMS1':<8} {'CMS2':<8} {'CMS3':<8} {'CMS4':<8} {'Kappa':<8}")
-    print("-"*80)
-    print(f"{results_clustering['Dataset']:<25} {results_clustering['Overall']:<10} "
-          f"{results_clustering['CMS1']:<8} {results_clustering['CMS2']:<8} "
-          f"{results_clustering['CMS3']:<8} {results_clustering['CMS4']:<8} "
-          f"{results_clustering['Kappa']:<8}")
+    # Calculate metrics
+    cm = calculate_metrics(y_true, y_pred_cms)
