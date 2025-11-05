@@ -89,19 +89,21 @@ def select_cms_relevant_pathways(activity_df):
     - CMS3: Metabolic
     - CMS4: Mesenchymal/stromal
     """
-    
+    activity_df = activity_df.T
     # CMS-relevant pathway keywords
     cms_keywords = [
         # Immune (CMS1)
         'immune', 'inflammation', 'cytokine', 'interferon', 'antigen', 'lymphocyte',
-        'T cell', 'B cell', 'NK cell', 'chemokine',
+        'T cell', 'B cell', 'NK cell', 'chemokine', 'pd1', 'cytotoxic', 'nkc', 'th1', 'tfh', 'th17', 'treg', 'mdsc', 'complement',
         
         # Canonical/WNT (CMS2)
-        'wnt', 'signaling', 'cell cycle', 'proliferation', 'egfr', 'erbb',
+        'wnt', 'signaling', 'cell cycle', 'proliferation', 'egfr', 'erbb', 'mapk', 'pi3k', 'src', 'jak_stat',
+        'caspases', 'proteasome', 'cell_cycle', 'translation', 'notch', 'integrin', 'vegf',
         
         # Metabolic (CMS3)
-        'metabolism', 'metabolic', 'glycolysis', 'fatty acid', 'citrate',
-        'oxidative phosphorylation', 'amino acid',
+        'metabolism', 'metabolic', 'glycolysis', 'fatty acid', 'citrate', 'sugar', 'glucose', 'fructose',
+        'oxidative phosphorylation', 'amino acid', 'sucrose', 'glactose', 'glutomine', 'glutathione', 'nitrogen',
+        'tyrosine', 'fatty_acid', 'arachnoid', 'linoleic',
         
         # Mesenchymal (CMS4)
         'tgf', 'beta', 'adhesion', 'ecm', 'extracellular matrix', 'angiogenesis',
@@ -126,7 +128,7 @@ def select_cms_relevant_pathways(activity_df):
     for i, p in enumerate(selected_pathways.index[:10]):
         print(f"  {i+1}. {p}")
     
-    return selected_pathways
+    return selected_pathways.T
 
 
 def calculate_metrics(y_true, y_pred, dataset_name='PathBayes'):
@@ -197,6 +199,9 @@ if __name__ == "__main__":
     # 3. Calculate activity
     #activity = calc_activity()
     activity = pd.read_csv(data_path+'output_activity.csv', index_col=0) # (samples (rows) × pathways (columns)) 472 x 314
+
+    # 4. Select CMS-relevant pathways (optional - comment out to use all pathways)
+    activity = select_cms_relevant_pathways(activity)
 
     # 4. Scale the data.
     #scaler = Normalizer()
