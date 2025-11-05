@@ -13,8 +13,6 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics import accuracy_score, confusion_matrix, cohen_kappa_score
 from config import *
-from activity import calc_activity
-from udp import udp_main
 from sklearn.preprocessing import Normalizer # Unit norm, row wise. # StandardScaler # Normal distribution. MinMaxScaler # [0,1] range, column wise.
 from sklearn.decomposition import PCA
 from metrics import *
@@ -23,9 +21,9 @@ from metrics import *
 def load_tcga_data(expression_file, labels_file):
     """Load TCGA CRC expression data and CMS labels"""
     
-    # Load expression data (genes × samples)
-    expr = pd.read_csv(expression_file, sep='\t', index_col=0)
-    print(f"Expression data shape: {expr.shape}")
+    # Load activity data (genes × samples)  # (samples (rows) × pathways (columns)) activity.shape = 472 x 314
+    activity = pd.read_csv(expression_file, index_col=0)
+    print(f"Data shape: {activity.shape}")
     
     # Load CMS labels
     labels = pd.read_csv(labels_file)
@@ -34,26 +32,27 @@ def load_tcga_data(expression_file, labels_file):
     outliers = pd.read_csv(data_path+'TCGACRC_expression_merged_outlier_strict.txt')
     outliers2 = set(labels.loc[pd.isna(labels["microsatelite"]) | (labels["microsatelite"] == 'Indeterminate')]['id'])
     outset = set(outliers.name).union(outliers2)
-    expr = expr.loc[:, ~expr.columns.isin(outset)]
-    print(f"Expression data shape after outlier cleanup: {expr.shape}")
+    activity = activity.loc[:, ~activity.columns.isin(outset)]
+    print(f"activity data shape after outlier cleanup: {activity.shape}")
     
     # Filter to TCGA samples only
     #tcga_labels = labels[labels['dataset'] == 'tcga'].copy()
     #tcga_labels = tcga_labels[tcga_labels['CMS_final_network_plus_RFclassifier_in_nonconsensus_samples'] != 'NOLBL']
     
     # Match samples between expression and labels
-    common_samples = list(set(expr.columns) & set(labels['id']))    
-    expr = expr[common_samples]
-    labels_matched = labels[labels['id'].isin(common_samples)].copy()
-    labels_matched.set_index('id', inplace=True)
-    labels_matched = labels_matched.loc[common_samples] # Ensure same order
-    print(f"Expression data shape after TCGA filter: {expr.shape} (genes, samples)")
+    common_samples = list(set(activity.index) & set(labels['id']))    
+    activity = activity[activity.index.isin(common_samples)]
+    labels = labels[labels['id'].isin(common_samples)].copy()
+    labels.set_index('id', inplace=True)
+    labels = labels.loc[common_samples] # Ensure same order
+    labels = labels['microsatelite']
+    print(f"activity data shape after TCGA filter: {activity.shape}")
 
     # Extract labels (final consensus)
     #y = labels_matched['microsatelite'] #CMS_final_network_plus_RFclassifier_in_nonconsensus_samples
     #print(pd.Series(y).value_counts().sort_index())
     
-    return expr, labels_matched
+    return activity, labels
 
 
 def calculate_udp(expr_data):
@@ -168,43 +167,33 @@ def calculate_metrics(y_true, y_pred):
 
 if __name__ == "__main__":
     """Main benchmark pipeline"""   
-    # 1. Load data
-    expression_file=data_path+'TCGACRC_expression-merged.zip'
-    expr_data, y_true = load_tcga_data(expression_file=expression_file, labels_file=data_path+'TCGACRC_clinical-merged.csv')
-    
-    # 2. Calculate UDP
-    #udp_df = calculate_udp(expr_data)
-    
-    # 3. Calculate activity
-    #activity = calc_activity(expression_file)
-    activity = pd.read_csv(data_path+'output_activity.csv', index_col=0) # (samples (rows) × pathways (columns)) activity.shape = 472 x 314
-    common_samples = list(set(activity.index) & set(y_true.index)) 
-    y_true = y_true[y_true.index.isin(common_samples)]
-    activity = activity[activity.index.isin(common_samples)]
-    y_true = y_true['microsatelite']
-    # 4. Select CMS-relevant pathways (optional - comment out to use all pathways)
-    activity = select_cms_relevant_pathways(activity)
+    # Load data
+    expression_file=data_path+'output_activity.csv'
+    activity, y_true = load_tcga_data(expression_file=expression_file, labels_file=data_path+'TCGACRC_clinical-merged.csv')
 
-    # 4. Scale the data.
+    # Select CMS-relevant pathways (optional - comment out to use all pathways)
+    activity = select_cms_relevant_pathways(activity)
+    
+    # Scale the data.
     scaler = Normalizer()
     activity = scaler.fit_transform(activity)
     
-    # 5. Dimensionality reduction with PCA
+    # Dimensionality reduction with PCA
     #pca = PCA(n_components=30, svd_solver='arpack')
     #activity = pca.fit_transform(activity)
     #print(f"PCA explained variance ratio: {pca.explained_variance_ratio_.sum():.3f}")
        
-    # 6. Cluster with KMeans (4 clusters for CMS1-4)
-    #print("Clustering with KMeans (k=3)...")
+    # Cluster
+    #print("Clustering (k=3)...")
     # Convert labels to numeric for metrics
     label_map = {label: index for index, label in enumerate(labels)}
     index_map = {index: label for index, label in enumerate(labels)}
     y_true_numeric = np.array([label_map[label] for label in y_true.values])
     kmeans = cluster_with_kmeans(activity, n_clusters=3)
     y_pred_kmeans = kmeans.labels_
-    #print(f"KMeans clustering complete. Predicted clusters: {len(y_pred_kmeans)}, values: {np.unique(y_pred_kmeans)}")
+    #print(f"Clustering complete. Predicted clusters: {len(y_pred_kmeans)}, values: {np.unique(y_pred_kmeans)}")
     
-    # 7. Calculate clustering metrics
+    # Calculate clustering metrics
     #print("="*80)   
     silhouette, calinski, special_acc, completeness, homogeneity, adjusted_mi = calc_stats(
         activity, 

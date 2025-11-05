@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 from config import *
-import itertools
 
 
 def parse_pathway_interactions(relations_file):
