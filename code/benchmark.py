@@ -32,7 +32,7 @@ def load_tcga_data(expression_file, labels_file):
     outliers = pd.read_csv(data_path+'TCGACRC_expression_merged_outlier_strict.txt')
     outliers2 = set(labels.loc[pd.isna(labels["microsatelite"]) | (labels["microsatelite"] == 'Indeterminate')]['id'])
     outset = set(outliers.name).union(outliers2)
-    activity = activity.loc[:, ~activity.columns.isin(outset)]
+    activity = activity.loc[~activity.index.isin(outset)]
     print(f"activity data shape after outlier cleanup: {activity.shape}")
     
     # Filter to TCGA samples only

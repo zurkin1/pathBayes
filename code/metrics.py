@@ -2,9 +2,6 @@ import numpy as np
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, completeness_score, homogeneity_score, adjusted_mutual_info_score, adjusted_rand_score, normalized_mutual_info_score
 from scipy.spatial.distance import pdist, squareform
 from scipy.optimize import linear_sum_assignment
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 from tqdm.notebook import tqdm
 from sklearn.cluster import KMeans, SpectralClustering
 from sklearn.preprocessing import MinMaxScaler
