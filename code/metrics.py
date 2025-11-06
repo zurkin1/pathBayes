@@ -88,13 +88,13 @@ def acc(y_true, y_pred):
 
 def calc_stats(act_mat, true_labels, pred_labels, debug=False):
     # Overall accuracy
-    print(f'overall_acc: {accuracy_score(true_labels, pred_labels)}')
+    #print(f'overall_acc: {accuracy_score(true_labels, pred_labels)}')
     
     # Confusion matrix
-    cm = confusion_matrix(true_labels, pred_labels)
-    print(f"\nconfusion matrix")
+    #cm = confusion_matrix(true_labels, pred_labels)
+    #print(f"confusion matrix")
     #df_cm = pd.DataFrame(cm, index=labels, columns=labels)
-    print(cm)
+    #print(cm)
 
     # Per-class sensitivity (recall)
     #class_acc = {}
@@ -106,7 +106,7 @@ def calc_stats(act_mat, true_labels, pred_labels, debug=False):
     #    print(f'class: {cms} acc: {class_acc[cms]}')
     
     # Cohen's Kappa
-    print(f'Cohen kappa: {cohen_kappa_score(true_labels, pred_labels):.2f}')
+    #print(f'Cohen kappa: {cohen_kappa_score(true_labels, pred_labels):.2f}')
 
     #Silhouette score.
     Silhouette = silhouette_score(act_mat, pred_labels, metric='euclidean')

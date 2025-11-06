@@ -111,11 +111,11 @@ labels = ['MSI-H', 'MSS', 'MSI-L'] #'CMS1', 'CMS2', 'CMS3', 'CMS4'
 if __name__ == "__main__":
     """Main benchmark pipeline"""   
     # Load data
-    expression_file=data_path+'output_activity1.csv'
+    expression_file=data_path+'output_activity.csv'
     activity, y_true = load_tcga_data(expression_file=expression_file, labels_file=data_path+'TCGACRC_clinical-merged.csv')
 
     # Select CMS-relevant pathways (optional - comment out to use all pathways)
-    activity = select_cms_relevant_pathways(activity)
+    #activity = select_cms_relevant_pathways(activity)
     
     # Scale the data.
     scaler = Normalizer()
