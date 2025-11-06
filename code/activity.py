@@ -87,7 +87,7 @@ def belief_propagation_interaction_graph(G, gene_priors, max_iter=30, tolerance=
     Stochastic belief propagation: at each iteration, randomly update a subset of edges/nodes.
     update_fraction: fraction of nodes to update each iteration (0–1).
     """
-    beliefs = {n: 0.5 for n in G.nodes}
+    beliefs = {n: 0 for n in G.nodes} # Initialize beliefs for all interactions to 0.
 
     # Assign edge-level "effect" (+1 activation, -1 inhibition)
     for u, v, data in G.edges(data=True):
@@ -98,9 +98,7 @@ def belief_propagation_interaction_graph(G, gene_priors, max_iter=30, tolerance=
         old_beliefs = beliefs.copy()
 
         # Randomly pick subset of nodes to update
-        nodes_to_update = random.sample(
-            list(G.nodes), max(1, int(update_fraction * len(G.nodes)))
-        )
+        nodes_to_update = random.sample(list(G.nodes), max(1, int(update_fraction * len(G.nodes))))
 
         for node in nodes_to_update:
             incoming_values = []
@@ -114,20 +112,14 @@ def belief_propagation_interaction_graph(G, gene_priors, max_iter=30, tolerance=
 
                 # influence = parent_belief * gene_val * sign
                 influence = edge_sign * beliefs[pred] * gene_val
-                incoming_values.append(influence)
+                beliefs[node] += influence
 
             # If no parents, use direct evidence from source genes
             if not incoming_values:
                 src_genes = G.nodes[node]["sources"]
                 incoming_values = [gene_priors.get(g, 0.5) for g in src_genes]
-
-            # Combine incoming influences (sum then squash to [0,1])
-            combined = np.mean(incoming_values) if incoming_values else 0.5
-            combined = np.clip(combined, 0.0, 1.0)
-
-            # Compute updated belief (edge-level modulation already applied)
-            output = CPT_BASELINE + (CPT_ACTIVATION - CPT_BASELINE) * combined
-            beliefs[node] = np.clip(output, 0.0, 1.0)
+                noisy_or = 1.0 - np.prod([1.0 - v for v in incoming_values]) if incoming_values else 0.5
+                beliefs[node] = noisy_or
 
         # Convergence check
         max_change = max(abs(beliefs[n] - old_beliefs[n]) for n in nodes_to_update)
