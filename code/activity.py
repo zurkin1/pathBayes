@@ -1,7 +1,9 @@
 import pandas as pd
 import numpy as np
 from config import *
+import networkx as nx
 import random
+import multiprocessing as mp
 
 
 # Load and parse interactions into simple pathway_interactions dictionary data structure. e.g.
@@ -37,7 +39,6 @@ def build_factor_graph_structure(interactions):
     where edges (genes) connect parent interactions to child interactions.
     Genes serve as evidence carriers, not nodes.
     """
-    import networkx as nx #Lazy initialize networkx backend registry to prevent warnings in multiprocessing.
     G = nx.DiGraph()
     factor_map = {} # target gene -> interaction ID(s)
     factor_id = 0
@@ -172,10 +173,11 @@ def calc_activity(udp_file=f'./data/output_udp.csv',
     
     # Save results
     activity_df.T.round(3).to_csv(output_file)
-    print(f"Saved activity matrix to {output_file}")
+    print(f"\nSaved activity matrix to {output_file}")
     
     return activity_df
 
 
 if __name__ == '__main__':
+    mp.set_start_method("spawn", force=True)
     calc_activity('./data/TCGACRC_expression-merged.zip')
