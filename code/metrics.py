@@ -10,6 +10,8 @@ from sklearn.feature_selection import VarianceThreshold
 import scipy
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
+from config import *
+from umap import UMAP
 
 
 #General metric functions used in the benchmarks.
@@ -141,17 +143,15 @@ def calc_stats(act_mat, true_labels, pred_labels, debug=False):
         print(f"normalized_mutual_info_score: {nmi}")
 
     # Plot: True vs Predicted clusters (scatter plot using PCA for visualization)
-    pca = PCA(n_components=2)
-    segments_2d = pca.fit_transform(act_mat)
-    plt.figure(figsize=(12, 5))
-    plt.subplot(1, 2, 1)
-    plt.scatter(segments_2d[:, 0], segments_2d[:, 1], c=[int(x) for x in true_labels], cmap='tab20', s=10)
-    plt.title('True Patient Labels')
-    plt.subplot(1, 2, 2)
-    plt.scatter(segments_2d[:, 0], segments_2d[:, 1], c=pred_labels, cmap='tab20', s=10)
-    plt.title('Predicted Clusters')
+    embedding = UMAP(n_neighbors=15, min_dist=0.3, random_state=42).fit_transform(act_mat)
+    fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+    for i, (labels, title) in enumerate([(true_labels, "True Labels"),
+                                        (pred_labels, "Predicted Clusters")]):
+        ax[i].scatter(embedding[:, 0], embedding[:, 1],
+                    c=labels, cmap='tab10', s=40, alpha=0.7)
+        ax[i].set_title(title)
+        ax[i].set_aspect('equal', 'box')
     plt.tight_layout()
-    plt.savefig(f'../data/clustering.png', dpi=150)
     plt.show()
 
     return Silhouette, Calinski, Special, Completeness, Homogeneity, Adjusted

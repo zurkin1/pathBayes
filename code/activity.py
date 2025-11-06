@@ -146,6 +146,8 @@ def calc_activity(udp_file=f'./data/output_udp.csv',
     # Load UDP values
     udp_df = pd.read_csv(udp_file, sep='\t', index_col=0)
     udp_df.index = udp_df.index.str.lower()
+    if udp_df.max().max() < 25:
+        udp_df = 2 ** udp_df
 
     # 1. Create a 'func' for parallel_apply
     func_to_apply = process_sample

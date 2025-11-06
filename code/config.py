@@ -17,6 +17,7 @@ UDP_WEIGHT=0.5 #Equal balance (recommended default).
 CPT_ACTIVATION=0.85 #CPT weight for activation interactions. Conditional Probabilty Table.
 CPT_INHIBITION=0.15 #CPT weight for inhibition interactions.
 CPT_BASELINE=0.1 #Baseline probability.
+DEBUG = False
 
 
 def parallel_apply(df, func, n_cores=None):
