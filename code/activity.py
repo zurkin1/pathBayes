@@ -3,7 +3,6 @@ import numpy as np
 from config import *
 import networkx as nx
 import random
-import multiprocessing as mp
 
 
 # Load and parse interactions into simple pathway_interactions dictionary data structure. e.g.
@@ -62,6 +61,19 @@ def build_factor_graph_structure(interactions):
                 if g in j_attrs["sources"]:
                     G.add_edge(i_node, j_node, gene=g, type=j_attrs["type"])
 
+    # 🧠 DEBUG: Print graph schema
+    if DEBUG:
+        print("=== Pathway Graph Schema ===")
+        print(f"Total nodes (interactions): {len(G.nodes)}")
+        print(f"Total edges (gene connections): {len(G.edges)}")
+        print("Nodes:")
+        for n, d in G.nodes(data=True):
+            print(f"  {n}: type={d['type']}, inhib={d['is_inhib']}, "
+                  f"sources={len(d['sources'])}, targets={len(d['targets'])}")
+        print("Edges:")
+        for u, v, d in G.edges(data=True):
+            print(f"  {u} → {v} via gene {d['gene']} ({d['type']})")
+        print("=============================")
     return G
 
 
@@ -80,7 +92,9 @@ def belief_propagation_interaction_graph(G, gene_priors, max_iter=30, tolerance=
     for u, v, data in G.edges(data=True):
         itype = data.get("type", "")
         data["effect"] = -1 if is_inhibitory(itype) else +1
-
+    
+    converged = False
+    
     for iteration in range(max_iter):
         old_beliefs = beliefs.copy()
 
@@ -99,7 +113,10 @@ def belief_propagation_interaction_graph(G, gene_priors, max_iter=30, tolerance=
 
                 # influence = parent_belief * gene_val * sign
                 influence = edge_sign * beliefs[pred] * gene_val
-                beliefs[node] += influence
+                incoming_values.append(influence)
+
+            if incoming_values:
+                beliefs[node] = np.mean(incoming_values)
 
             # If no parents, use direct evidence from source genes
             if not incoming_values:
@@ -108,11 +125,27 @@ def belief_propagation_interaction_graph(G, gene_priors, max_iter=30, tolerance=
                 noisy_or = 1.0 - np.prod([1.0 - v for v in incoming_values]) if incoming_values else 0.5
                 beliefs[node] = noisy_or
 
-        # Convergence check
         max_change = max(abs(beliefs[n] - old_beliefs[n]) for n in nodes_to_update)
+        # 🧠 DEBUG: Print belief table dynamically
+        if DEBUG:
+            print(f"Iteration {iteration + 1}/{max_iter}")
+            print(f"Max belief change: {max_change:.5f}")
+            print("Node | Belief")
+            for n in sorted(beliefs):
+                print(f"{n:6} | {beliefs[n]:.4f}")
+
+        # Convergence check
         if max_change < tolerance:
+            converged = True
             break
 
+   # 🧠 DEBUG: Summary
+    if DEBUG:
+        if converged:
+            print(f"✅ Converged after {iteration + 1} iterations (max change < {tolerance})\n")
+        else:
+            print(f"⚠️ Max iterations reached ({max_iter}) without convergence.\n")
+    
     return beliefs
 
 
@@ -134,6 +167,8 @@ def process_sample(sample_udp: pd.Series) -> dict[str, float]:
 
         # Pathway activity = mean belief across interactions
         pathway_activities[pathway] = float(np.mean(list(beliefs.values())))
+        if DEBUG:
+            break
 
     return pathway_activities
 
@@ -149,6 +184,10 @@ def calc_activity(udp_file=f'./data/output_udp.csv',
     udp_df.index = udp_df.index.str.lower()
     if udp_df.max().max() < 25:
         udp_df = 2 ** udp_df
+    if DEBUG:
+        udp_df = udp_df.iloc[:,0]
+        process_sample(udp_df)
+        return
 
     # 1. Create a 'func' for parallel_apply
     func_to_apply = process_sample
@@ -173,11 +212,10 @@ def calc_activity(udp_file=f'./data/output_udp.csv',
     
     # Save results
     activity_df.T.round(3).to_csv(output_file)
-    print(f"\nSaved activity matrix to {output_file}")
+    print(f"Saved activity matrix to {output_file}")
     
     return activity_df
 
 
 if __name__ == '__main__':
-    mp.set_start_method("spawn", force=True)
     calc_activity('./data/TCGACRC_expression-merged.zip')
