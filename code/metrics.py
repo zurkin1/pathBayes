@@ -8,6 +8,8 @@ from sklearn.cluster import KMeans, SpectralClustering
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.feature_selection import VarianceThreshold
 import scipy
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
 
 
 #General metric functions used in the benchmarks.
@@ -137,6 +139,20 @@ def calc_stats(act_mat, true_labels, pred_labels, debug=False):
         print(f"adjusted_mutual_info_score: {Adjusted}")
         print(f"adjusted_rand_score: {ari}")
         print(f"normalized_mutual_info_score: {nmi}")
+
+    # Plot: True vs Predicted clusters (scatter plot using PCA for visualization)
+    pca = PCA(n_components=2)
+    segments_2d = pca.fit_transform(act_mat)
+    plt.figure(figsize=(12, 5))
+    plt.subplot(1, 2, 1)
+    plt.scatter(segments_2d[:, 0], segments_2d[:, 1], c=[int(x) for x in true_labels], cmap='tab20', s=10)
+    plt.title('True Patient Labels')
+    plt.subplot(1, 2, 2)
+    plt.scatter(segments_2d[:, 0], segments_2d[:, 1], c=pred_labels, cmap='tab20', s=10)
+    plt.title('Predicted Clusters')
+    plt.tight_layout()
+    plt.savefig(f'../data/clustering.png', dpi=150)
+    plt.show()
 
     return Silhouette, Calinski, Special, Completeness, Homogeneity, Adjusted
 

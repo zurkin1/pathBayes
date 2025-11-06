@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 from config import *
-import networkx as nx
 import random
 
 
@@ -38,6 +37,7 @@ def build_factor_graph_structure(interactions):
     where edges (genes) connect parent interactions to child interactions.
     Genes serve as evidence carriers, not nodes.
     """
+    import networkx as nx #Lazy initialize networkx backend registry to prevent warnings in multiprocessing.
     G = nx.DiGraph()
     factor_map = {} # target gene -> interaction ID(s)
     factor_id = 0
@@ -62,20 +62,6 @@ def build_factor_graph_structure(interactions):
                     G.add_edge(i_node, j_node, gene=g, type=j_attrs["type"])
 
     return G
-
-
-def compute_factor_output(source_beliefs, is_inhibitory):
-    """Compute output of a factor given source beliefs."""
-    # Noisy-OR combination of sources
-    combined = 1.0 - np.prod([1.0 - b for b in source_beliefs])
-    
-    # Apply CPT
-    if is_inhibitory:
-        output = CPT_BASELINE * (1.0 - CPT_INHIBITION * combined)
-    else:
-        output = CPT_BASELINE + CPT_ACTIVATION * combined
-    
-    return np.clip(output, 0.0, 1.0)
 
 
 def belief_propagation_interaction_graph(G, gene_priors, max_iter=30, tolerance=1e-3, update_fraction=0.3):
@@ -184,7 +170,7 @@ def calc_activity(udp_file=f'./data/output_udp.csv',
     
     # Save results
     activity_df.T.round(3).to_csv(output_file)
-    print(f"\nSaved activity matrix to {output_file}")
+    print(f"Saved activity matrix to {output_file}")
     
     return activity_df
 
