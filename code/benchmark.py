@@ -11,7 +11,6 @@ Additional quality control steps like outlier detection and normalization (inclu
 """
 import pandas as pd
 import numpy as np
-from sklearn.metrics import accuracy_score, confusion_matrix, cohen_kappa_score
 from config import *
 from sklearn.preprocessing import Normalizer # Unit norm, row wise. # StandardScaler # Normal distribution. MinMaxScaler # [0,1] range, column wise.
 from sklearn.decomposition import PCA
@@ -53,24 +52,6 @@ def load_tcga_data(expression_file, labels_file):
     #print(pd.Series(y).value_counts().sort_index())
     
     return activity, labels
-
-
-def calculate_udp(expr_data):
-    """Calculate UDP values for expression data"""
-    print("\nCalculating UDP values...")
-    
-    # PathBayes expects data in specific format
-    # Save temporarily for UDP calculation
-    expr_data.to_csv('./data/input.csv')
-    
-    # Calculate UDP using negative binomial (RNA-seq)
-    udp_df, _ = udp_main()
-    
-    # Save UDP
-    udp_df.to_csv('./data/output_udp.csv')
-    print(f"UDP calculated: {udp_df.shape}")
-    
-    return udp_df
 
 
 def select_cms_relevant_pathways(activity_df):
@@ -127,48 +108,10 @@ def select_cms_relevant_pathways(activity_df):
 labels = ['MSI-H', 'MSS', 'MSI-L'] #'CMS1', 'CMS2', 'CMS3', 'CMS4'
 
 
-def calculate_metrics(y_true, y_pred):
-    """
-    Calculate performance metrics matching Table 16 format:
-    - Overall accuracy
-    - Per-class accuracy (sensitivity)
-    - Cohen's Kappa
-    """
-    # Overall accuracy
-    print(f'overall_acc: {accuracy_score(y_true, y_pred)}')
-    
-    # Confusion matrix
-    cm = confusion_matrix(y_true, y_pred, labels=labels)
-    """Print confusion matrix"""
-    print(f"\nconfusion matrix")
-    print("-"*50)
-    df_cm = pd.DataFrame(
-        cm,
-        index=labels,
-        columns=labels
-    )
-    print(df_cm)
-    print()
-
-    # Per-class sensitivity (recall)
-    class_acc = {}
-    for i, cms in enumerate(labels):
-        if cm[i, :].sum() > 0:
-            class_acc[cms] = cm[i, i] / cm[i, :].sum()
-        else:
-            class_acc[cms] = 0.0
-        print(f'class: {cms} acc: {class_acc[cms]}')
-    
-    # Cohen's Kappa
-    print(f'Cohen kappa: {cohen_kappa_score(y_true, y_pred):.2f}')
-    
-    return cm
-
-
 if __name__ == "__main__":
     """Main benchmark pipeline"""   
     # Load data
-    expression_file=data_path+'output_activity.csv'
+    expression_file=data_path+'output_activity1.csv'
     activity, y_true = load_tcga_data(expression_file=expression_file, labels_file=data_path+'TCGACRC_clinical-merged.csv')
 
     # Select CMS-relevant pathways (optional - comment out to use all pathways)
@@ -186,25 +129,16 @@ if __name__ == "__main__":
     # Cluster
     #print("Clustering (k=3)...")
     # Convert labels to numeric for metrics
-    label_map = {label: index for index, label in enumerate(labels)}
-    index_map = {index: label for index, label in enumerate(labels)}
-    y_true_numeric = np.array([label_map[label] for label in y_true.values])
-    kmeans = cluster_with_kmeans(activity, n_clusters=3)
+    kmeans = clustering(activity, n_clusters=3)
     y_pred_kmeans = kmeans.labels_
-    #print(f"Clustering complete. Predicted clusters: {len(y_pred_kmeans)}, values: {np.unique(y_pred_kmeans)}")
     
-    # Calculate clustering metrics
-    #print("="*80)   
+    # Metrics
+    label_map = {label: index for index, label in enumerate(labels)}
+    #index_map = {index: label for index, label in enumerate(labels)}
+    y_true_numeric = np.array([label_map[label] for label in y_true.values])
     silhouette, calinski, special_acc, completeness, homogeneity, adjusted_mi = calc_stats(
         activity, 
         y_true_numeric, 
         y_pred_kmeans,
         debug=True
     )
-    
-    # 8. Convert cluster labels to CMS labels for confusion matrix
-    # Map cluster assignments to labels (need to find best matching)
-    y_pred_cms = np.array([index_map[label] for label in y_pred_kmeans])
-    
-    # Calculate metrics
-    cm = calculate_metrics(y_true, y_pred_cms)

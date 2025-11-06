@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, completeness_score, homogeneity_score, adjusted_mutual_info_score, adjusted_rand_score, normalized_mutual_info_score
+from sklearn.metrics import accuracy_score, confusion_matrix, cohen_kappa_score
 from scipy.spatial.distance import pdist, squareform
 from scipy.optimize import linear_sum_assignment
 from tqdm.notebook import tqdm
@@ -86,6 +87,27 @@ def acc(y_true, y_pred):
 
 
 def calc_stats(act_mat, true_labels, pred_labels, debug=False):
+    # Overall accuracy
+    print(f'overall_acc: {accuracy_score(true_labels, pred_labels)}')
+    
+    # Confusion matrix
+    cm = confusion_matrix(true_labels, pred_labels)
+    print(f"\nconfusion matrix")
+    #df_cm = pd.DataFrame(cm, index=labels, columns=labels)
+    print(cm)
+
+    # Per-class sensitivity (recall)
+    #class_acc = {}
+    #for i, cms in enumerate(labels):
+    #    if cm[i, :].sum() > 0:
+    #        class_acc[cms] = cm[i, i] / cm[i, :].sum()
+    #    else:
+    #        class_acc[cms] = 0.0
+    #    print(f'class: {cms} acc: {class_acc[cms]}')
+    
+    # Cohen's Kappa
+    print(f'Cohen kappa: {cohen_kappa_score(true_labels, pred_labels):.2f}')
+
     #Silhouette score.
     Silhouette = silhouette_score(act_mat, pred_labels, metric='euclidean')
 
@@ -155,7 +177,7 @@ def feature_importance(scores_df, true_labels):
         for pathway, accuracy in sorted_genesets[:40]:
             print(f'Pathway set: {pathway}')
 
-def cluster_with_kmeans(results_matrix, n_clusters=3):
+def clustering(results_matrix, n_clusters=3):
     #Perform KMeans clustering.
     #model = KMeans(n_clusters).fit(results_matrix)
     model = SpectralClustering(n_clusters=n_clusters, affinity='nearest_neighbors', random_state=42).fit(results_matrix)

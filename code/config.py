@@ -13,7 +13,6 @@ if CURRENT_DIR not in sys.path:
 
 infinitesimal = np.finfo(float).eps
 data_path = './data/'
-TEST = ''
 UDP_WEIGHT=0.5 #Equal balance (recommended default).
 CPT_ACTIVATION=0.85 #CPT weight for activation interactions. Conditional Probabilty Table.
 CPT_INHIBITION=0.15 #CPT weight for inhibition interactions.
