@@ -89,29 +89,47 @@ def belief_propagation_interaction_graph(G, gene_priors, max_iter=30, tolerance=
     """
     beliefs = {n: 0.5 for n in G.nodes}
 
+    # Assign edge-level "effect" (+1 activation, -1 inhibition)
+    for u, v, data in G.edges(data=True):
+        itype = data.get("type", "")
+        data["effect"] = -1 if is_inhibitory(itype) else +1
+
     for iteration in range(max_iter):
         old_beliefs = beliefs.copy()
-        nodes_to_update = random.sample(list(G.nodes),
-                                        max(1, int(update_fraction * len(G.nodes))))
+
+        # Randomly pick subset of nodes to update
+        nodes_to_update = random.sample(
+            list(G.nodes), max(1, int(update_fraction * len(G.nodes)))
+        )
 
         for node in nodes_to_update:
-            attrs = G.nodes[node]
-            src_genes = attrs["sources"]
-            is_inhib = attrs["is_inhib"]
+            incoming_values = []
 
-            incoming_evidence = []
+            # Collect influences from parents
             for pred in G.predecessors(node):
                 edge_data = G[pred][node]
-                g = edge_data["gene"]
-                gene_val = gene_priors.get(g, 0.5)
-                incoming_evidence.append(beliefs[pred] * gene_val)
+                gene = edge_data["gene"]
+                gene_val = gene_priors.get(gene, 0.5)
+                edge_sign = edge_data["effect"]
 
-            if not incoming_evidence and src_genes:
-                incoming_evidence = [gene_priors.get(g, 0.5) for g in src_genes]
+                # influence = parent_belief * gene_val * sign
+                influence = edge_sign * beliefs[pred] * gene_val
+                incoming_values.append(influence)
 
-            output = compute_factor_output(incoming_evidence, is_inhib) if incoming_evidence else 0.5
-            beliefs[node] = output
+            # If no parents, use direct evidence from source genes
+            if not incoming_values:
+                src_genes = G.nodes[node]["sources"]
+                incoming_values = [gene_priors.get(g, 0.5) for g in src_genes]
 
+            # Combine incoming influences (sum then squash to [0,1])
+            combined = np.mean(incoming_values) if incoming_values else 0.5
+            combined = np.clip(combined, 0.0, 1.0)
+
+            # Compute updated belief (edge-level modulation already applied)
+            output = CPT_BASELINE + (CPT_ACTIVATION - CPT_BASELINE) * combined
+            beliefs[node] = np.clip(output, 0.0, 1.0)
+
+        # Convergence check
         max_change = max(abs(beliefs[n] - old_beliefs[n]) for n in nodes_to_update)
         if max_change < tolerance:
             break
