@@ -1,8 +1,11 @@
 import pandas as pd
 import numpy as np
 from config import *
+from pgmpy.models import BayesianNetwork
+from pgmpy.factors.discrete import TabularCPD
+from pgmpy.inference import VariableElimination
 import networkx as nx
-import random
+from itertools import product
 
 
 # Load and parse interactions into simple pathway_interactions dictionary data structure. e.g.
@@ -32,189 +35,170 @@ def is_inhibitory(interaction_type):
     return any(keyword in interaction_type.lower() for keyword in inhibitory_keywords)
 
 
-def build_factor_graph_structure(interactions):
+def build_model_and_cpds(interactions, sample_udp, DEBUG=False):
     """
-    Build a directed graph of interaction nodes (I_1, I_2, ...)
-    where edges (genes) connect parent interactions to child interactions.
-    Genes serve as evidence carriers, not nodes.
+    Build a Bayesian network model of pathway interactions.
+    Each interaction (I_k) is a node.
+    Each gene connects I_parent -> I_child with P(I_child|I_parent) = UDP(gene),
+    adjusted for inhibitory edges.
     """
-    G = nx.DiGraph()
-    factor_map = {} # target gene -> interaction ID(s)
-    factor_id = 0
 
-    # Step 1: Create interaction nodes
-    for src_genes, itype, tgt_genes, _ in interactions:
-        if not tgt_genes:
+    model = BayesianNetwork()
+    edges = []
+    child_parents = {}
+
+    # Build edge list based on shared genes between interactions
+    for i1, (src1, _, tgt1, _) in enumerate(interactions):
+        for i2, (src2, _, tgt2, _) in enumerate(interactions):
+            if i1 == i2:
+                continue  # skip self
+            shared = set(tgt1) & set(src2)
+            for g in shared:
+                edges.append((f"I_{i1}", f"I_{i2}", g))
+                child_parents.setdefault(f"I_{i2}", []).append((f"I_{i1}", g))
+
+    # Add all nodes upfront so they exist for cycle checks
+    for i in range(len(interactions)):
+        model.add_node(f"I_{i}")
+
+    # Add edges safely, skipping cycles
+    for parent, child, _ in edges:
+        if parent == child:
             continue
-        is_inhib = is_inhibitory(itype)
-        node_id = f"I_{factor_id}"
-        factor_id += 1
-        G.add_node(node_id, sources=src_genes, targets=tgt_genes, type=itype, is_inhib=is_inhib)
-        for tgt in tgt_genes:
-            factor_map.setdefault(tgt, []).append(node_id)
+        # Prevent cycles before adding
+        if nx.has_path(model, child, parent):
+            if DEBUG:
+                print(f"⚠️ Skipping edge {parent} → {child} (would create loop)")
+            continue
+        model.add_edge(parent, child)
 
-    # Step 2: Connect interactions via shared genes
-    for i_node, attrs in G.nodes(data=True):
-        for g in attrs["targets"]:
-            # Find all interactions that use this gene as source
-            for j_node, j_attrs in G.nodes(data=True):
-                if g in j_attrs["sources"]:
-                    G.add_edge(i_node, j_node, gene=g, type=j_attrs["type"])
-
-    # 🧠 DEBUG: Print graph schema
     if DEBUG:
-        print("=== Pathway Graph Schema ===")
-        print(f"Total nodes (interactions): {len(G.nodes)}")
-        print(f"Total edges (gene connections): {len(G.edges)}")
-        print("Nodes:")
-        for n, d in G.nodes(data=True):
-            print(f"  {n}: type={d['type']}, inhib={d['is_inhib']}, "
-                  f"sources={len(d['sources'])}, targets={len(d['targets'])}")
-        print("Edges:")
-        for u, v, d in G.edges(data=True):
-            print(f"  {u} → {v} via gene {d['gene']} ({d['type']})")
-        print("=============================")
-    return G
+        print("\n=== Pathway graph structure ===")
+        for parent, child, gene in edges:
+            print(f"{parent} → {child} via {gene}")
+        print("===============================\n")
 
-
-def belief_propagation_interaction_graph(G, gene_priors, max_iter=30, tolerance=1e-3, update_fraction=0.3):
-    """
-    Propagate beliefs over an interaction graph (NetworkX DiGraph).
-    Each node = interaction (activation/inhibition),
-    Each edge = gene carrying evidence.
-    gene_priors: dict {gene_name: expression_value in [0,1]}
-    Stochastic belief propagation: at each iteration, randomly update a subset of edges/nodes.
-    update_fraction: fraction of nodes to update each iteration (0–1).
-    """
-    beliefs = {n: 0 for n in G.nodes} # Initialize beliefs for all interactions to 0.
-
-    # Assign edge-level "effect" (+1 activation, -1 inhibition)
-    for u, v, data in G.edges(data=True):
-        itype = data.get("type", "")
-        data["effect"] = -1 if is_inhibitory(itype) else +1
+    # Build CPDs
+    cpds = []
+    for i, (src, typ, tgt, _) in enumerate(interactions):
+        node = f"I_{i}"
+        parents_info = child_parents.get(node, [])
+        parents = [p for p, _ in parents_info if p != node]
+        parents = list(dict.fromkeys(parents))  # deduplicate
     
-    converged = False
-    
-    for iteration in range(max_iter):
-        old_beliefs = beliefs.copy()
+        # keep only parents that are actual edges in model
+        actual_edges = set(model.edges())
+        parents = [p for p in parents if (p, node) in actual_edges]
 
-        # Randomly pick subset of nodes to update
-        nodes_to_update = random.sample(list(G.nodes), max(1, int(update_fraction * len(G.nodes))))
-
-        for node in nodes_to_update:
-            incoming_values = []
-
-            # Collect influences from parents
-            for pred in G.predecessors(node):
-                edge_data = G[pred][node]
-                gene = edge_data["gene"]
-                gene_val = gene_priors.get(gene, 0.5)
-                edge_sign = edge_data["effect"]
-
-                # influence = parent_belief * gene_val * sign
-                influence = edge_sign * beliefs[pred] * gene_val
-                incoming_values.append(influence)
-
-            if incoming_values:
-                beliefs[node] = np.mean(incoming_values)
-
-            # If no parents, use direct evidence from source genes
-            if not incoming_values:
-                src_genes = G.nodes[node]["sources"]
-                incoming_values = [gene_priors.get(g, 0.5) for g in src_genes]
-                noisy_or = 1.0 - np.prod([1.0 - v for v in incoming_values]) if incoming_values else 0.5
-                beliefs[node] = noisy_or
-
-        max_change = max(abs(beliefs[n] - old_beliefs[n]) for n in nodes_to_update)
-        # 🧠 DEBUG: Print belief table dynamically
-        if DEBUG:
-            print(f"Iteration {iteration + 1}/{max_iter}")
-            print(f"Max belief change: {max_change:.5f}")
-            print("Node | Belief")
-            for n in sorted(beliefs):
-                print(f"{n:6} | {beliefs[n]:.4f}")
-
-        # Convergence check
-        if max_change < tolerance:
-            converged = True
-            break
-
-   # 🧠 DEBUG: Summary
-    if DEBUG:
-        if converged:
-            print(f"✅ Converged after {iteration + 1} iterations (max change < {tolerance})\n")
+        if not parents:
+            # No parents: simple prior belief
+            cpd = TabularCPD(variable=node, variable_card=2, values=[[0.5], [0.5]])
         else:
-            print(f"⚠️ Max iterations reached ({max_iter}) without convergence.\n")
-    
-    return beliefs
+            n_parents = len(parents)
+            n_cols = 2 ** n_parents
+
+            probs = []
+            for combo in product([0, 1], repeat=n_parents):
+                p_up = 1.0
+                for (parent, gene), val in zip(parents_info, combo):
+                    # use UDP of gene (default 0.5 if missing)
+                    udp_val = float(sample_udp.get(gene, 0.5))
+                    # inhibitory edges invert probability
+                    if "inhib" in typ.lower() or "dephosph" in typ.lower():
+                        udp_val = 1.0 - udp_val
+                    if val == 1:
+                        p_up *= udp_val
+                    else:
+                        p_up *= (1 - udp_val)
+                probs.append(p_up)
+
+            values = np.vstack([1 - np.array(probs), np.array(probs)])  # shape (2, n_cols)
+
+            # --- Robust normalization: avoid divide-by-zero and numerical drift ---
+            col_sums = values.sum(axis=0, keepdims=True)
+            # Replace any zeros with 1 to avoid division errors
+            col_sums[col_sums == 0] = 1.0
+            values = np.divide(values, col_sums, where=col_sums != 0)
+
+            # Replace any NaN or Inf with uniform 0.5
+            values = np.nan_to_num(values, nan=0.5, posinf=0.5, neginf=0.5)
+
+            # Force exact normalization (sums = 1)
+            values /= np.maximum(values.sum(axis=0, keepdims=True), 1e-12)
+
+            # Clip to [0, 1] to remove residual rounding drift
+            values = np.clip(values, 0.0, 1.0)
+
+            # Re-normalize one last time to ensure exact column sums = 1
+            values /= values.sum(axis=0, keepdims=True)
 
 
-def process_sample(sample_udp: pd.Series) -> dict[str, float]:
-    """Process a single sample and return pathway activities."""
-    pathway_activities = {}
+            cpd = TabularCPD(
+                variable=node,
+                variable_card=2,
+                values=values,
+                evidence=parents,
+                evidence_card=[2] * n_parents,
+            )
 
-    for pathway, interactions in pathway_interactions.items():
-        G = build_factor_graph_structure(interactions)
-        if len(G.nodes) == 0:
-            pathway_activities[pathway] = 0.5
-            continue
+        cpds.append(cpd)
 
-        # Use expression values as priors
-        gene_priors = {g: sample_udp.get(g, 0.5) for g in set(sample_udp.index)}
+    # Add all CPDs to model
+    model.add_cpds(*cpds)
 
-        # Run Bayesian propagation on the graph
-        beliefs = belief_propagation_interaction_graph(G, gene_priors)
+    # Validate the model
+    try:
+        model.check_model()
+        if DEBUG:
+            print("✅ Bayesian model structure and CPDs validated successfully.\n")
+    except Exception as e:
+        print(f"⚠️ Model validation failed: {e}")
 
-        # Pathway activity = mean belief across interactions
-        pathway_activities[pathway] = float(np.mean(list(beliefs.values())))
+    return model
+
+def calc_pathway_activity(interactions, sample_udp):
+    model = build_model_and_cpds(interactions, sample_udp)
+    # check model is valid
+    # use VariableElimination for exact inference
+    infer = VariableElimination(model)
+    # compute marginal P(node=up) for each interaction node
+    probs = []
+    for i in range(len(interactions)):
+        node = f"I_{i}"
+        q = infer.query([node], show_progress=False)
+        # q is a DiscreteFactor: get probability for state 1 ('up') which is index 1
+        val = q.get_value(**{node: 1})
+        # val is array [P(down), P(up)]
+        if val.size >= 2:
+            p_up = float(val[1])
+        else:
+            p_up = 0.5
+        probs.append(p_up)
+    return float(np.mean(probs)) if probs else 0.5
+
+
+def process_sample(sample_udp: pd.Series):
+    pathway_interactions, pathway_names = parse_pathway_interactions('./data/pathway_relations.csv')
+    activities = {}
+    for path, inters in pathway_interactions.items():
+        activities[path] = calc_pathway_activity(inters, sample_udp)
         if DEBUG:
             break
+    return activities
 
-    return pathway_activities
 
-
-def calc_activity(udp_file=f'./data/output_udp.csv',
-                  output_file=f'./data/output_activity.csv'):
-    """
-    Calculate pathway activities using factor graph belief propagation
-    and the parallel_apply function.
-    """   
-    # Load UDP values
+def calc_activity(udp_file='./data/output_udp.csv', output_file='./data/output_activity.csv'):
     udp_df = pd.read_csv(udp_file, sep='\t', index_col=0)
     udp_df.index = udp_df.index.str.lower()
     if udp_df.max().max() < 25:
         udp_df = 2 ** udp_df
     if DEBUG:
-        udp_df = udp_df.iloc[:,0]
-        process_sample(udp_df)
-        return
-
-    # 1. Create a 'func' for parallel_apply
-    func_to_apply = process_sample
-    
-    # 2. Transpose udp_df so rows are samples, columns are genes
+        udp_df = udp_df.iloc[:, :1]
     df_to_process = udp_df.T
-    
-    print(f"Processing {len(df_to_process)} samples via parallel_apply...")
-    
-    # 3. Call parallel_apply
-    #    It will iterate over rows of df_to_process (samples)
-    #    It returns a new DataFrame where rows are samples
-    #    and columns are pathway activities
-    activity_df_T = parallel_apply(df_to_process, func_to_apply)
-    
-    # 4. Transpose back to match original activity_df format
-    #    (rows=pathways, cols=samples)
-    activity_df = activity_df_T.T
-    
-    # Reorder pathways to match original parsing
-    #activity_df = activity_df.reindex(pathway_names)
-    
-    # Save results
-    activity_df.T.round(3).to_csv(output_file)
-    print(f"Saved activity matrix to {output_file}")
-    
-    return activity_df
+    results = parallel_apply(df_to_process, process_sample)
+    results = pd.DataFrame(results.tolist(), index=df_to_process.index)
+    results.to_csv(output_file)
+    return results
 
 
 if __name__ == '__main__':
