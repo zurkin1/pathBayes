@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from config import *
-import sorobn
+from bayes_net import BayesNet
 import networkx as nx
 
 
@@ -80,14 +80,15 @@ def build_bayesnet(interactions, sample_udp):
         cycle = list(nx.find_cycle(G, orientation='original'))
         while len(cycle) > 0:
             u, v, _ = cycle[0]
-            print(f"⚠️ Removing edge {u}->{v} to break cycle.")
+            #if DEBUG:
+            #    print(f"⚠️ Removing edge {u}->{v} to break cycle.")
             G.remove_edge(u, v)
             cycle = list(nx.find_cycle(G, orientation='original'))
     except nx.NetworkXNoCycle:
         pass
 
     # Initialize network
-    bn = sorobn.BayesNet(*( (u, v) for u, v in G.edges ))
+    bn = BayesNet(*( (u, v) for u, v in G.edges ), seed=42)
 
     # Assign CPTs for nodes in proper Series format.
     #Assume conditional independence of causes given the child (as in Noisy-OR).
@@ -110,14 +111,14 @@ def build_bayesnet(interactions, sample_udp):
         # one-parent active cases
         for i, p in enumerate(parents):
             g = G[p][v].get("gene", "")
-            udp_orig = float(sample_udp.get(g, 0.5))
+            udp_orig = np.clip(float(sample_udp.get(g, 0.5)), 1e-6, 1 - 1e-6)
             udp = to_prob_power(udp_orig)
             if v in inhibitory:
                 udp = 1 - udp
             state_true = [F] * n
             state_true[i] = T
-            cpt[tuple(state_true + [T])] = np.clip(udp, 1e-6, 1 - 1e-6)
-            cpt[tuple(state_true + [F])] = 1 - cpt[tuple(state_true + [T])]
+            cpt[tuple(state_true + [T])] = udp
+            cpt[tuple(state_true + [F])] = 1 - udp
 
         bn.P[v] = pd.Series(cpt)
 
@@ -130,7 +131,7 @@ def process_sample(sample_udp: pd.Series):
     then propagating and averaging all node beliefs."""
     activities = {}
 
-    for path, interactions in tqdm(pathway_interactions.items()):
+    for path, interactions in pathway_interactions.items():
         bn, G = build_bayesnet(interactions, sample_udp)
 
         #Update_beliefs_via_sampling.
@@ -140,12 +141,9 @@ def process_sample(sample_udp: pd.Series):
 
         # --- Query beliefs of all nodes ---
         probs = []
-        for node in bn.nodes:
-            try:
-                q = bn.query(node, event={})
-                probs.append(q.mean())
-            except Exception:
-                continue
+        for idx, node in enumerate(bn.nodes):
+            q = bn.query(node, event={}) #, algorithm='likelihood'
+            probs.append(q.mean())
 
         activities[path] = float(np.mean(probs)) if probs else 0.0
         if DEBUG:
@@ -159,9 +157,9 @@ def calc_activity(udp_file='./data/output_udp.csv', output_file='./data/output_a
     udp_df = pd.read_csv(udp_file, sep='\t', index_col=0)
     udp_df.index = udp_df.index.str.lower()
     if DEBUG:
-        udp_df = udp_df.iloc[:, :1]
-        print(f"DEBUG: Limiting UDP to one sample ({udp_df.columns[0]})")
-        process_sample(udp_df)
+        for col in udp_df.columns:
+            print(f"Processing sample {col}...")
+            process_sample(udp_df[col])
         exit(0)
 
     df_to_process = udp_df.T
