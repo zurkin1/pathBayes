@@ -40,15 +40,12 @@ def build_bayesnet(interactions, sample_udp):
         P(I2 | I1=True)  = UDP(g)
         P(I2 | I1=False) = CPT_BASELINE
     """
-    nodes, edges, inhibitory = [], [], []
+    nodes, edges = [], []
 
-    # Create nodes for all interactions.
-    for idx in range(len(interactions)):
-        src_genes, itype, tgt_genes, _ = interactions[idx]
-        node = f"I_{idx}"
-        nodes.append(node)
-        if is_inhibitory(itype):
-            inhibitory.append(node)
+    # Create nodes for all interactions
+    for i, (src_genes, itype, tgt_genes, _) in enumerate(interactions):
+        if tgt_genes:
+            nodes.append(f"I_{i}")
 
     # Create edges between interactions via shared genes
     for i1, (src1, t1, tgt1, _) in enumerate(interactions):
@@ -57,23 +54,17 @@ def build_bayesnet(interactions, sample_udp):
             for g in shared:
                 edges.append((f"I_{i1}", f"I_{i2}", g))
 
-    # Master root node that connects to all real root nodes.
-    all_targets = {v for _, v, _ in edges}
-    root_nodes = [n for n in nodes if n not in all_targets]
-    nodes.append("I_1000")
-
-    for root in root_nodes:
-        for src_genes, _, tgt_genes, _ in interactions:
-            for g in src_genes:
-                edges.append(("I_1000", root, g))
-
-    # Add edges: keep only valid (u, v) pairs of distinct strings
+    # Clean edges: keep only valid (u, v) pairs of distinct strings
     G = nx.DiGraph()
     for e in edges:
         if isinstance(e, (list, tuple)) and len(e) == 3:
             u, v, g = e
             if isinstance(u, str) and isinstance(v, str) and u != v:
-                G.add_edge(u, v, gene=g) # Keep gene as attribute.
+                # Assign CPTs for each child node in proper Series format.
+                #Assume conditional independence of causes given the child (as in Noisy-OR).
+                udp_orig = float(sample_udp.get(g, 0.5))
+                udp = to_prob_power(udp_orig)
+                G.add_edge(u, v, gene=g, udp=udp) # Keep gene as attribute.
 
     # --- Detect and remove cycles ---
     try:
@@ -89,68 +80,75 @@ def build_bayesnet(interactions, sample_udp):
     # Initialize network
     bn = sorobn.BayesNet(*( (u, v) for u, v in G.edges ))
 
-    # Assign CPTs for nodes in proper Series format.
-    #Assume conditional independence of causes given the child (as in Noisy-OR).
     T, F = True, False
-    for v in G.nodes:
-        parents = list(G.predecessors(v))
-        if not parents:
-            #Master node is always True. We configure dangling nodes to true as well to use their UDP directly.
-            bn.P[v] = pd.Series({True: 1.0, False: 0.0})
-            continue
+    #bn.P[v] = pd.Series({(T, T): udp, # P(v=True | u=True) (T, F): 1 - udp, # P(v=False | u=True) (F, T): CPT_BASELINE, # P(v=True | u=False) (F, F): 1 - CPT_BASELINE })
 
-        cpt = {}
-        n = len(parents)
-
-        # baseline: all parents False
-        all_false = tuple([F] * n + [T])
-        cpt[all_false] = CPT_BASELINE
-        cpt[tuple([F] * n + [F])] = 1 - CPT_BASELINE
-
-        # one-parent active cases
-        for i, p in enumerate(parents):
-            g = G[p][v].get("gene", "")
-            udp_orig = float(sample_udp.get(g, 0.5))
-            udp = to_prob_power(udp_orig)
-            if v in inhibitory:
-                udp = 1 - udp
-            state_true = [F] * n
-            state_true[i] = T
-            cpt[tuple(state_true + [T])] = np.clip(udp, 1e-6, 1 - 1e-6)
-            cpt[tuple(state_true + [F])] = 1 - cpt[tuple(state_true + [T])]
-
-        bn.P[v] = pd.Series(cpt)
+    # Set priors for root nodes (no parents)
+    #for n in bn.nodes:
+    #    bn.P[n] = pd.Series({
+    #        True: to_prob_power(sample_udp.get(n, 0)),  # or any normalization you use
+    #        False: 1 - to_prob_power(sample_udp.get(n, 0))
+    #    })
 
     bn.prepare()
-    return bn, G
+    return bn
+
+
+def noisy_or_prob(bn, u, event, base=1e-3):
+    """Compute P(node=True | event) using per-edge Noisy-OR on-the-fly."""
+    parents = bn.parents(u)
+    if not parents:
+        # prior for root nodes
+        incoming = [(a, b, d) for a, b, d in bn.graph.edges(data=True) if b == u]
+        if not incoming:
+            return 0.5 # fallback prior
+
+        strengths = []
+        for _, _, d in incoming:
+            udp = float(d.get("udp", 0.5))
+            udp = to_prob_power(udp)
+            g = d.get("gene", "")
+            if is_inhibitory(g):
+                udp = 1 - udp
+            strengths.append(np.clip(udp, 1e-6, 1 - 1e-6))
+
+        p_true = 1 - np.prod([(1 - s) for s in strengths])
+        return np.clip(p_true, 1e-6, 1 - 1e-6)
+
+    #active_parents = [p for p in parents if event.get(p, False)] # we assume all parents in the event.
+    strengths = [bn.graph[p][u].get("udp", 0.5) for p in parents]
+    if strengths:
+        #Noisy or assumption.
+        p_true = 1 - np.prod([(1 - to_prob_power(s)) for s in strengths])
+    else:
+        p_true = base
+    return np.clip(p_true, 1e-6, 1 - 1e-6)
 
 
 def process_sample(sample_udp: pd.Series):
-    """Compute pathway activity by updating beliefs of root nodes via noisy-OR,
-    then propagating and averaging all node beliefs."""
+    """Compute all pathway activities for a given patient sample."""
     activities = {}
+    for path, interactions in pathway_interactions.items():
+        #activities[path] = calc_pathway_activity(inters, sample_udp)
+        """Compute mean posterior probability across all interactions in a pathway."""
+        bn = build_bayesnet(interactions, sample_udp)
 
-    for path, interactions in tqdm(pathway_interactions.items()):
-        bn, G = build_bayesnet(interactions, sample_udp)
+        # Fit with pseudo-data. Finalizes internal structures (like normalization and message tables).
+        df = pd.DataFrame([{k: sample_udp.get(k, 0) for k in bn.nodes}])
+        bn.fit(df)
 
-        #Update_beliefs_via_sampling.
-        n_samples=100
-        samples = bn.sample(n_samples)
-        bn.fit(samples)
-
-        # --- Query beliefs of all nodes ---
+        # Compute activity as mean posterior probability
         probs = []
         for node in bn.nodes:
             try:
-                q = bn.query(node, event={})
-                probs.append(q.mean())
+                #q = bn.query(node, event={})
+                q = noisy_or_prob(bn, node, event={})
+                probs.append(q)
             except Exception:
                 continue
 
         activities[path] = float(np.mean(probs)) if probs else 0.0
-        if DEBUG:
-            break # only one for debugging
-
+        if DEBUG: break # only one for debugging
     return activities
 
 
@@ -161,8 +159,6 @@ def calc_activity(udp_file='./data/output_udp.csv', output_file='./data/output_a
     if DEBUG:
         udp_df = udp_df.iloc[:, :1]
         print(f"DEBUG: Limiting UDP to one sample ({udp_df.columns[0]})")
-        process_sample(udp_df)
-        exit(0)
 
     df_to_process = udp_df.T
     print(f"Processing {len(df_to_process)} samples...")

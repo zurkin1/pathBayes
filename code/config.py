@@ -17,7 +17,7 @@ UDP_WEIGHT=0.5 #Equal balance (recommended default).
 CPT_ACTIVATION=0.85 #CPT weight for activation interactions. Conditional Probabilty Table.
 CPT_INHIBITION=0.15 #CPT weight for inhibition interactions.
 CPT_BASELINE=0.5 #Baseline probability. P(child | parent=0)
-DEBUG = False
+DEBUG = True
 
 
 def parallel_apply(df, func, n_cores=None):
@@ -35,3 +35,12 @@ def parallel_apply(df, func, n_cores=None):
         )
 
     return pd.DataFrame(results, index=df.index)
+
+def to_prob_logscale(x, vmax=22.0, eps=1e-6):
+    p = np.log1p(x) / np.log1p(vmax)   # log(1+x)/log(1+vmax)
+    return np.clip(p, eps, 1 - eps)
+
+
+def to_prob_power(x, vmax=22.0, alpha=0.5, eps=1e-6):
+    p = (np.power(x, alpha)) / (np.power(vmax, alpha))
+    return np.clip(p, eps, 1 - eps)

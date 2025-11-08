@@ -6,3 +6,4 @@ tqdm
 networkx
 matplotlib
 umap-learn
+bnlearn
