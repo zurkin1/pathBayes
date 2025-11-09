@@ -1,0 +1,804 @@
+      I_0    I_1   I_10  I_1000   I_11   I_12   I_13  ...   I_89    I_9   I_90   I_91   I_92  I_93   I_94
+0   False  False   True    True  False   True   True  ...  False  False  False  False  False  True   True
+1   False  False  False    True  False   True  False  ...   True  False   True  False   True  True  False
+2   False  False   True    True  False   True   True  ...  False  False   True  False   True  True  False
+3   False  False   True    True  False  False  False  ...   True  False  False  False   True  True  False
+4    True   True   True    True  False   True   True  ...   True   True  False  False   True  True   True
+..    ...    ...    ...     ...    ...    ...    ...  ...    ...    ...    ...    ...    ...   ...    ...
+95   True  False   True    True  False   True  False  ...  False  False  False  False   True  True   True
+96  False  False  False    True   True   True  False  ...  False  False   True   True   True  True  False
+97   True  False   True    True  False   True   True  ...   True   True   True  False  False  True  False
+98   True  False   True    True  False   True   True  ...  False   True  False  False   True  True  False
+99   True   True  False    True  False   True  False  ...  False  False  False  False   True  True  False
+
+[100 rows x 96 columns]
+
+I_0    I_59   I_60   I_69  I_89   I_90   I_91 
+False  False  False  True  False  False  False    5
+                                         True     1
+                                  True   False    4
+                                         True     1
+                           True   False  False    4
+                                         True     2
+                                  True   False    6
+                                         True     1
+              True   True  False  False  False    2
+                                  True   False    3
+                                         True     1
+                           True   False  False    2
+                                  True   False    1
+                                         True     1
+       True   False  True  False  False  False    1
+                                  True   False    1
+                           True   False  False    2
+                                         True     2
+                                  True   False    3
+              True   True  False  True   False    4
+                                         True     2
+                           True   False  False    2
+                                  True   False    1
+True   False  False  True  False  False  False    2
+                                         True     4
+                                  True   False    6
+                                         True     1
+                           True   False  False    4
+                                         True     1
+                                  True   False    1
+              True   True  False  False  False    4
+                                         True     1
+                                  True   False    3
+                           True   False  False    1
+                                         True     1
+       True   False  True  False  False  False    5
+                                         True     1
+                                  True   False    1
+                                         True     1
+                           True   False  False    1
+                                  True   False    4
+              True   True  False  False  False    2
+                                  True   True     1
+                           True   False  False    2
+                                  True   False    1
+dtype: int64
+
+{'I_0': I_62   I_0  
+False  False    0.500000
+       True     0.500000
+True   False    0.849244
+       True     0.150756
+Name: P(I_0 | I_62), dtype: float64, 'I_45': I_0    I_59   I_60   I_69   I_89   I_90   I_91   I_45 
+False  False  False  False  False  False  False  False    0.500000
+                                                 True     0.500000
+                                          True   False    0.849244
+                                                 True     0.150756
+                                   True   False  False    0.849244
+                                                 True     0.150756
+                            True   False  False  False    0.849244
+                                                 True     0.150756
+                     True   False  False  False  False    0.849244
+                                                 True     0.150756
+              True   False  False  False  False  False    0.849244
+                                                 True     0.150756
+       True   False  False  False  False  False  False    0.849244
+                                                 True     0.150756
+True   False  False  False  False  False  False  False    0.849244
+                                                 True     0.150756
+Name: P(I_45 | I_0, I_59, I_60, I_69, I_89, I_90, I_91), dtype: float64, 'I_47': I_0    I_59   I_60   I_69   I_89   I_90   I_91   I_47 
+False  False  False  False  False  False  False  False    0.500000
+                                                 True     0.500000
+                                          True   False    0.849244
+                                                 True     0.150756
+                                   True   False  False    0.849244
+                                                 True     0.150756
+                            True   False  False  False    0.849244
+                                                 True     0.150756
+                     True   False  False  False  False    0.849244
+                                                 True     0.150756
+              True   False  False  False  False  False    0.849244
+                                                 True     0.150756
+       True   False  False  False  False  False  False    0.849244
+                                                 True     0.150756
+True   False  False  False  False  False  False  False    0.849244
+                                                 True     0.150756
+Name: P(I_47 | I_0, I_59, I_60, I_69, I_89, I_90, I_91), dtype: float64, 'I_48': I_0    I_59   I_60   I_69   I_89   I_90   I_91   I_48 
+False  False  False  False  False  False  False  False    0.500000
+                                                 True     0.500000
+                                          True   False    0.849244
+                                                 True     0.150756
+                                   True   False  False    0.849244
+                                                 True     0.150756
+                            True   False  False  False    0.849244
+                                                 True     0.150756
+                     True   False  False  False  False    0.849244
+                                                 True     0.150756
+              True   False  False  False  False  False    0.849244
+                                                 True     0.150756
+       True   False  False  False  False  False  False    0.849244
+                                                 True     0.150756
+True   False  False  False  False  False  False  False    0.849244
+                                                 True     0.150756
+Name: P(I_48 | I_0, I_59, I_60, I_69, I_89, I_90, I_91), dtype: float64, 'I_52': I_0    I_59   I_60   I_69   I_89   I_90   I_91   I_52 
+False  False  False  False  False  False  False  False    0.500000
+                                                 True     0.500000
+                                          True   False    0.849244
+                                                 True     0.150756
+                                   True   False  False    0.849244
+                                                 True     0.150756
+                            True   False  False  False    0.849244
+                                                 True     0.150756
+                     True   False  False  False  False    0.849244
+                                                 True     0.150756
+              True   False  False  False  False  False    0.849244
+                                                 True     0.150756
+       True   False  False  False  False  False  False    0.849244
+                                                 True     0.150756
+True   False  False  False  False  False  False  False    0.849244
+                                                 True     0.150756
+Name: P(I_52 | I_0, I_59, I_60, I_69, I_89, I_90, I_91), dtype: float64, 'I_75': I_0    I_59   I_60   I_69   I_89   I_90   I_91   I_75 
+False  False  False  False  False  False  False  False    0.500000
+                                                 True     0.500000
+                                          True   False    0.849244
+                                                 True     0.150756
+                                   True   False  False    0.849244
+                                                 True     0.150756
+                            True   False  False  False    0.849244
+                                                 True     0.150756
+                     True   False  False  False  False    0.849244
+                                                 True     0.150756
+              True   False  False  False  False  False    0.849244
+                                                 True     0.150756
+       True   False  False  False  False  False  False    0.849244
+                                                 True     0.150756
+True   False  False  False  False  False  False  False    0.849244
+                                                 True     0.150756
+Name: P(I_75 | I_0, I_59, I_60, I_69, I_89, I_90, I_91), dtype: float64, 'I_76': I_0    I_59   I_60   I_69   I_89   I_90   I_91   I_76 
+False  False  False  False  False  False  False  False    0.500000
+                                                 True     0.500000
+                                          True   False    0.849244
+                                                 True     0.150756
+                                   True   False  False    0.849244
+                                                 True     0.150756
+                            True   False  False  False    0.849244
+                                                 True     0.150756
+                     True   False  False  False  False    0.849244
+                                                 True     0.150756
+              True   False  False  False  False  False    0.849244
+                                                 True     0.150756
+       True   False  False  False  False  False  False    0.849244
+                                                 True     0.150756
+True   False  False  False  False  False  False  False    0.849244
+                                                 True     0.150756
+Name: P(I_76 | I_0, I_59, I_60, I_69, I_89, I_90, I_91), dtype: float64, 'I_77': I_0    I_59   I_60   I_69   I_89   I_90   I_91   I_77 
+False  False  False  False  False  False  False  False    0.500000
+                                                 True     0.500000
+                                          True   False    0.849244
+                                                 True     0.150756
+                                   True   False  False    0.849244
+                                                 True     0.150756
+                            True   False  False  False    0.849244
+                                                 True     0.150756
+                     True   False  False  False  False    0.849244
+                                                 True     0.150756
+              True   False  False  False  False  False    0.849244
+                                                 True     0.150756
+       True   False  False  False  False  False  False    0.849244
+                                                 True     0.150756
+True   False  False  False  False  False  False  False    0.849244
+                                                 True     0.150756
+Name: P(I_77 | I_0, I_59, I_60, I_69, I_89, I_90, I_91), dtype: float64, 'I_78': I_0    I_59   I_60   I_69   I_89   I_90   I_91   I_78 
+False  False  False  False  False  False  False  False    0.500000
+                                                 True     0.500000
+                                          True   False    0.849244
+                                                 True     0.150756
+                                   True   False  False    0.849244
+                                                 True     0.150756
+                            True   False  False  False    0.849244
+                                                 True     0.150756
+                     True   False  False  False  False    0.849244
+                                                 True     0.150756
+              True   False  False  False  False  False    0.849244
+                                                 True     0.150756
+       True   False  False  False  False  False  False    0.849244
+                                                 True     0.150756
+True   False  False  False  False  False  False  False    0.849244
+                                                 True     0.150756
+Name: P(I_78 | I_0, I_59, I_60, I_69, I_89, I_90, I_91), dtype: float64, 'I_1': I_1000  I_1  
+False   False    0.500000
+        True     0.500000
+True    False    0.849244
+        True     0.150756
+Name: P(I_1 | I_1000), dtype: float64, 'I_16': I_1    I_16 
+False  False    0.500000
+       True     0.500000
+True   False    0.150756
+       True     0.849244
+Name: P(I_16 | I_1), dtype: float64, 'I_22': I_1    I_22 
+False  False    0.500000
+       True     0.500000
+True   False    0.150756
+       True     0.849244
+Name: P(I_22 | I_1), dtype: float64, 'I_2': I_2
+False    0.0
+True     1.0
+Name: P(I_2), dtype: float64, 'I_3': I_2    I_3  
+False  False    0.500000
+       True     0.500000
+True   False    0.849244
+       True     0.150756
+Name: P(I_3 | I_2), dtype: float64, 'I_5': I_10   I_12   I_14   I_16   I_18   I_20   I_28   I_29   I_3    I_30   I_31   I_33   I_50   I_51   I_54   I_63   I_64   I_65   I_67   I_68   I_5  
+False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False    0.500000
+                                                                                                                                            True     0.500000
+                                                                                                                                     True   False    0.849244
+                                                                                                                                            True     0.150756
+                                                                                                                              True   False  False    0.849244
+                                                                                                                                            True     0.150756
+                                                                                                                       True   False  False  False    0.849244
+                                                                                                                                            True     0.150756
+                                                                                                                True   False  False  False  False    0.849244
+                                                                                                                                            True     0.150756
+                                                                                                         True   False  False  False  False  False    0.849244
+                                                                                                                                            True     0.150756
+                                                                                                  True   False  False  False  False  False  False    0.849244
+                                                                                                                                            True     0.150756
+                                                                                           True   False  False  False  False  False  False  False    0.849244
+                                                                                                                                            True     0.150756
+                                                                                    True   False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                            True     0.150756
+                                                                             True   False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                            True     0.150756
+                                                                      True   False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                            True     0.150756
+                                                               True   False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                            True     0.150756
+                                                        True   False  False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                            True     0.150756
+                                                 True   False  False  False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                            True     0.150756
+                                          True   False  False  False  False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                            True     0.150756
+                                   True   False  False  False  False  False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                            True     0.150756
+                            True   False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                            True     0.150756
+                     True   False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                            True     0.150756
+              True   False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                            True     0.150756
+       True   False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                            True     0.150756
+True   False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                            True     0.150756
+Name: P(I_5 | I_10, I_12, I_14, I_16, I_18, I_20, I_28, I_29, I_3, I_30, I_31, I_33, I_50, I_51, I_54, I_63, I_64, I_65, I_67, I_68), dtype: float64, 'I_64': I_10   I_12   I_14   I_16   I_18   I_20   I_28   I_29   I_3    I_30   I_31   I_33   I_50   I_51   I_54   I_63   I_65   I_67   I_68   I_64 
+False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False    0.500000
+                                                                                                                                     True     0.500000
+                                                                                                                              True   False    0.849244
+                                                                                                                                     True     0.150756
+                                                                                                                       True   False  False    0.849244
+                                                                                                                                     True     0.150756
+                                                                                                                True   False  False  False    0.849244
+                                                                                                                                     True     0.150756
+                                                                                                         True   False  False  False  False    0.849244
+                                                                                                                                     True     0.150756
+                                                                                                  True   False  False  False  False  False    0.849244
+                                                                                                                                     True     0.150756
+                                                                                           True   False  False  False  False  False  False    0.849244
+                                                                                                                                     True     0.150756
+                                                                                    True   False  False  False  False  False  False  False    0.849244
+                                                                                                                                     True     0.150756
+                                                                             True   False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                     True     0.150756
+                                                                      True   False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                     True     0.150756
+                                                               True   False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                     True     0.150756
+                                                        True   False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                     True     0.150756
+                                                 True   False  False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                     True     0.150756
+                                          True   False  False  False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                     True     0.150756
+                                   True   False  False  False  False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                     True     0.150756
+                            True   False  False  False  False  False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                     True     0.150756
+                     True   False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                     True     0.150756
+              True   False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                     True     0.150756
+       True   False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                     True     0.150756
+True   False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False  False    0.849244
+                                                                                                                                     True     0.150756
+Name: P(I_64 | I_10, I_12, I_14, I_16, I_18, I_20, I_28, I_29, I_3, I_30, I_31, I_33, I_50, I_51, I_54, I_63, I_65, I_67, I_68), dtype: float64, 'I_4': I_1000  I_4  
+False   False    0.500000
+        True     0.500000
+True    False    0.150756
+        True     0.849244
+Name: P(I_4 | I_1000), dtype: float64, 'I_70': I_22   I_24   I_26   I_32   I_34   I_35   I_4    I_8    I_70 
+False  False  False  False  False  False  False  False  False    0.500000
+                                                        True     0.500000
+                                                 True   False    0.150756
+                                                        True     0.849244
+                                          True   False  False    0.150756
+                                                        True     0.849244
+                                   True   False  False  False    0.150756
+                                                        True     0.849244
+                            True   False  False  False  False    0.150756
+                                                        True     0.849244
+                     True   False  False  False  False  False    0.150756
+                                                        True     0.849244
+              True   False  False  False  False  False  False    0.150756
+                                                        True     0.849244
+       True   False  False  False  False  False  False  False    0.150756
+                                                        True     0.849244
+True   False  False  False  False  False  False  False  False    0.150756
+                                                        True     0.849244
+Name: P(I_70 | I_22, I_24, I_26, I_32, I_34, I_35, I_4, I_8), dtype: float64, 'I_92': I_22   I_24   I_26   I_32   I_34   I_35   I_4    I_8    I_92 
+False  False  False  False  False  False  False  False  False    0.500000
+                                                        True     0.500000
+                                                 True   False    0.849244
+                                                        True     0.150756
+                                          True   False  False    0.849244
+                                                        True     0.150756
+                                   True   False  False  False    0.849244
+                                                        True     0.150756
+                            True   False  False  False  False    0.849244
+                                                        True     0.150756
+                     True   False  False  False  False  False    0.849244
+                                                        True     0.150756
+              True   False  False  False  False  False  False    0.849244
+                                                        True     0.150756
+       True   False  False  False  False  False  False  False    0.849244
+                                                        True     0.150756
+True   False  False  False  False  False  False  False  False    0.849244
+                                                        True     0.150756
+Name: P(I_92 | I_22, I_24, I_26, I_32, I_34, I_35, I_4, I_8), dtype: float64, 'I_9': I_5    I_7    I_9  
+False  False  False    0.500000
+              True     0.500000
+       True   False    0.849244
+              True     0.150756
+True   False  False    0.849244
+              True     0.150756
+Name: P(I_9 | I_5, I_7), dtype: float64, 'I_11': I_5    I_7    I_11 
+False  False  False    0.500000
+              True     0.500000
+       True   False    0.849244
+              True     0.150756
+True   False  False    0.849244
+              True     0.150756
+Name: P(I_11 | I_5, I_7), dtype: float64, 'I_6': I_1000  I_6  
+False   False    0.500000
+        True     0.500000
+True    False    0.849244
+        True     0.150756
+Name: P(I_6 | I_1000), dtype: float64, 'I_7': I_6    I_7  
+False  False    0.500000
+       True     0.500000
+True   False    0.849244
+       True     0.150756
+Name: P(I_7 | I_6), dtype: float64, 'I_13': I_6    I_13 
+False  False    0.500000
+       True     0.500000
+True   False    0.849244
+       True     0.150756
+Name: P(I_13 | I_6), dtype: float64, 'I_8': I_1000  I_8  
+False   False    0.500000
+        True     0.500000
+True    False    0.150756
+        True     0.849244
+Name: P(I_8 | I_1000), dtype: float64, 'I_10': I_1000  I_10 
+False   False    0.500000
+        True     0.500000
+True    False    0.150756
+        True     0.849244
+Name: P(I_10 | I_1000), dtype: float64, 'I_21': I_11   I_21 
+False  False    0.500000
+       True     0.500000
+True   False    0.150756
+       True     0.849244
+Name: P(I_21 | I_11), dtype: float64, 'I_12': I_1000  I_12 
+False   False    0.500000
+        True     0.500000
+True    False    0.150756
+        True     0.849244
+Name: P(I_12 | I_1000), dtype: float64, 'I_15': I_13   I_15 
+False  False    0.500000
+       True     0.500000
+True   False    0.849244
+       True     0.150756
+Name: P(I_15 | I_13), dtype: float64, 'I_14': I_1000  I_14 
+False   False    0.500000
+        True     0.500000
+True    False    0.150756
+        True     0.849244
+Name: P(I_14 | I_1000), dtype: float64, 'I_17': I_15   I_19   I_17 
+False  False  False    0.500000
+              True     0.500000
+       True   False    0.849244
+              True     0.150756
+True   False  False    0.849244
+              True     0.150756
+Name: P(I_17 | I_15, I_19), dtype: float64, 'I_18': I_94   I_18 
+False  False    0.500000
+       True     0.500000
+True   False    0.150756
+       True     0.849244
+Name: P(I_18 | I_94), dtype: float64, 'I_19': I_1000  I_19 
+False   False    0.500000
+        True     0.500000
+True    False    0.849244
+        True     0.150756
+Name: P(I_19 | I_1000), dtype: float64, 'I_20': I_82   I_20 
+False  False    0.500000
+       True     0.500000
+True   False    0.150756
+       True     0.849244
+Name: P(I_20 | I_82), dtype: float64, 'I_25': I_21   I_23   I_70   I_25 
+False  False  False  False    0.500000
+                     True     0.500000
+              True   False    0.849244
+                     True     0.150756
+       True   False  False    0.849244
+                     True     0.150756
+True   False  False  False    0.849244
+                     True     0.150756
+Name: P(I_25 | I_21, I_23, I_70), dtype: float64, 'I_60': I_21   I_23   I_70   I_60 
+False  False  False  False    0.500000
+                     True     0.500000
+              True   False    0.849244
+                     True     0.150756
+       True   False  False    0.849244
+                     True     0.150756
+True   False  False  False    0.849244
+                     True     0.150756
+Name: P(I_60 | I_21, I_23, I_70), dtype: float64, 'I_23': I_1000  I_23 
+False   False    0.500000
+        True     0.500000
+True    False    0.150756
+        True     0.849244
+Name: P(I_23 | I_1000), dtype: float64, 'I_24': I_94   I_24 
+False  False    0.500000
+       True     0.500000
+True   False    0.150756
+       True     0.849244
+Name: P(I_24 | I_94), dtype: float64, 'I_27': I_25   I_27 
+False  False    0.500000
+       True     0.500000
+True   False    0.849244
+       True     0.150756
+Name: P(I_27 | I_25), dtype: float64, 'I_26': I_1000  I_26 
+False   False    0.500000
+        True     0.500000
+True    False    0.150756
+        True     0.849244
+Name: P(I_26 | I_1000), dtype: float64, 'I_28': I_1000  I_28 
+False   False    0.500000
+        True     0.500000
+True    False    0.150756
+        True     0.849244
+Name: P(I_28 | I_1000), dtype: float64, 'I_29': I_1000  I_29 
+False   False    0.500000
+        True     0.500000
+True    False    0.150756
+        True     0.849244
+Name: P(I_29 | I_1000), dtype: float64, 'I_30': I_1000  I_30 
+False   False    0.500000
+        True     0.500000
+True    False    0.150756
+        True     0.849244
+Name: P(I_30 | I_1000), dtype: float64, 'I_31': I_1000  I_31 
+False   False    0.500000
+        True     0.500000
+True    False    0.150756
+        True     0.849244
+Name: P(I_31 | I_1000), dtype: float64, 'I_32': I_1000  I_32 
+False   False    0.500000
+        True     0.500000
+True    False    0.150756
+        True     0.849244
+Name: P(I_32 | I_1000), dtype: float64, 'I_33': I_1000  I_33 
+False   False    0.500000
+        True     0.500000
+True    False    0.150756
+        True     0.849244
+Name: P(I_33 | I_1000), dtype: float64, 'I_34': I_1000  I_34 
+False   False    0.500000
+        True     0.500000
+True    False    0.150756
+        True     0.849244
+Name: P(I_34 | I_1000), dtype: float64, 'I_35': I_1000  I_35 
+False   False    0.500000
+        True     0.500000
+True    False    0.150756
+        True     0.849244
+Name: P(I_35 | I_1000), dtype: float64, 'I_36': I_37   I_36 
+False  False    0.500000
+       True     0.500000
+True   False    0.849244
+       True     0.150756
+Name: P(I_36 | I_37), dtype: float64, 'I_79': I_36   I_37   I_79 
+False  False  False    0.500000
+              True     0.500000
+       True   False    0.849244
+              True     0.150756
+True   False  False    0.849244
+              True     0.150756
+Name: P(I_79 | I_36, I_37), dtype: float64, 'I_82': I_36   I_37   I_82 
+False  False  False    0.500000
+              True     0.500000
+       True   False    0.849244
+              True     0.150756
+True   False  False    0.849244
+              True     0.150756
+Name: P(I_82 | I_36, I_37), dtype: float64, 'I_37': I_38   I_39   I_40   I_74   I_37 
+False  False  False  False  False    0.500000
+                            True     0.500000
+                     True   False    0.849244
+                            True     0.150756
+              True   False  False    0.849244
+                            True     0.150756
+       True   False  False  False    0.849244
+                            True     0.150756
+True   False  False  False  False    0.849244
+                            True     0.150756
+Name: P(I_37 | I_38, I_39, I_40, I_74), dtype: float64, 'I_38': I_41   I_38 
+False  False    0.500000
+       True     0.500000
+True   False    0.849244
+       True     0.150756
+Name: P(I_38 | I_41), dtype: float64, 'I_59': I_38   I_39   I_40   I_74   I_59 
+False  False  False  False  False    0.500000
+                            True     0.500000
+                     True   False    0.849244
+                            True     0.150756
+              True   False  False    0.849244
+                            True     0.150756
+       True   False  False  False    0.849244
+                            True     0.150756
+True   False  False  False  False    0.849244
+                            True     0.150756
+Name: P(I_59 | I_38, I_39, I_40, I_74), dtype: float64, 'I_39': I_42   I_39 
+False  False    0.500000
+       True     0.500000
+True   False    0.849244
+       True     0.150756
+Name: P(I_39 | I_42), dtype: float64, 'I_40': I_43   I_40 
+False  False    0.500000
+       True     0.500000
+True   False    0.849244
+       True     0.150756
+Name: P(I_40 | I_43), dtype: float64, 'I_41': I_44   I_71   I_41 
+False  False  False    0.500000
+              True     0.500000
+       True   False    0.849244
+              True     0.150756
+True   False  False    0.849244
+              True     0.150756
+Name: P(I_41 | I_44, I_71), dtype: float64, 'I_42': I_44   I_71   I_42 
+False  False  False    0.500000
+              True     0.500000
+       True   False    0.849244
+              True     0.150756
+True   False  False    0.849244
+              True     0.150756
+Name: P(I_42 | I_44, I_71), dtype: float64, 'I_43': I_46   I_72   I_43 
+False  False  False    0.500000
+              True     0.500000
+       True   False    0.849244
+              True     0.150756
+True   False  False    0.849244
+              True     0.150756
+Name: P(I_43 | I_46, I_72), dtype: float64, ...}
+
+self._P_sizes[child] = counts.groupby(parents).sum()
+self._P_sizes[child=='I_45'].index
+MultiIndex([(False, False, False, True, False, False, False),
+            (False, False, False, True, False, False,  True),
+            (False, False, False, True, False,  True, False),
+            (False, False, False, True, False,  True,  True),
+            (False, False, False, True,  True, False, False),
+            (False, False, False, True,  True, False,  True),
+            (False, False, False, True,  True,  True, False),
+            (False, False, False, True,  True,  True,  True),
+            (False, False,  True, True, False, False, False),
+            (False, False,  True, True, False,  True, False),
+            (False, False,  True, True, False,  True,  True),
+            (False, False,  True, True,  True, False, False),
+            (False, False,  True, True,  True, False,  True),
+            (False, False,  True, True,  True,  True, False),
+            (False,  True, False, True, False, False, False),
+            (False,  True, False, True, False,  True, False),
+            (False,  True, False, True,  True, False,  True),
+            (False,  True, False, True,  True,  True, False),
+            (False,  True,  True, True, False, False, False),
+            (False,  True,  True, True, False, False,  True),
+            (False,  True,  True, True, False,  True, False),
+            ( True, False, False, True, False, False, False),
+            ( True, False, False, True, False,  True, False),
+            ( True, False, False, True, False,  True,  True),
+            ( True, False, False, True,  True, False, False),
+            ( True, False, False, True,  True, False,  True),
+            ( True, False, False, True,  True,  True, False),
+            ( True, False, False, True,  True,  True,  True),
+            ( True, False,  True, True, False, False, False),
+            ( True, False,  True, True, False, False,  True),
+            ( True, False,  True, True, False,  True, False),
+            ( True, False,  True, True, False,  True,  True),
+            ( True, False,  True, True,  True,  True, False),
+            ( True,  True, False, True, False, False, False),
+            ( True,  True, False, True, False, False,  True),
+            ( True,  True, False, True, False,  True, False),
+            ( True,  True, False, True,  True, False, False),
+            ( True,  True, False, True,  True,  True, False),
+            ( True,  True,  True, True, False, False, False),
+            ( True,  True,  True, True, False,  True, False)],
+           names=['I_0', 'I_59', 'I_60', 'I_69', 'I_89', 'I_90', 'I_91'])
+
+counts
+I_0    I_59   I_60   I_69  I_89   I_90   I_91   I_45 
+False  False  False  True  False  False  False  False     9
+                                                True      2
+                                         True   False     1
+                                  True   False  False     1
+                                                True      2
+                                         True   False     1
+                           True   False  False  False    12
+                                                True      1
+                                         True   True      1
+                                  True   False  False     3
+                                                True      2
+                                         True   True      1
+              True   True  False  False  False  False     2
+                                                True      1
+                                  True   False  False     1
+                                         True   False     1
+                                                True      1
+                           True   False  False  False     1
+                                                True      1
+                                         True   False     1
+                                  True   False  False     2
+                                                True      1
+       True   False  True  False  False  False  False     3
+                                                True      1
+                                  True   False  False     1
+                                                True      1
+                           True   False  True   False     1
+                                  True   False  False     1
+              True   True  False  False  False  False     2
+                                                True      1
+                                         True   False     2
+                                  True   False  True      2
+True   False  False  True  False  False  False  False     2
+                                                True      2
+                                  True   False  False     2
+                                                True      1
+                                         True   True      1
+                           True   False  False  False     3
+                                                True      1
+                                         True   False     3
+                                                True      1
+                                  True   False  False     1
+                                         True   True      1
+              True   True  False  False  False  True      1
+                                         True   True      1
+                                  True   False  True      1
+                                         True   True      1
+                           True   True   False  False     2
+                                                True      1
+       True   False  True  False  False  False  True      1
+                                         True   True      1
+                                  True   False  True      2
+                           True   False  False  True      3
+                                  True   False  True      1
+              True   True  False  False  False  True      1
+                                  True   False  False     1
+                                                True      2
+dtype: int64
+
+counts.index.names
+FrozenList(['I_0', 'I_59', 'I_60', 'I_69', 'I_89', 'I_90', 'I_91', 'I_45'])
+
+self._P_sizes[child] = counts.groupby(parents).sum()
+I_0    I_59   I_60   I_69  I_89   I_90   I_91 
+False  False  False  True  False  False  False    11
+                                         True      1
+                                  True   False     3
+                                         True      1
+                           True   False  False    13
+                                         True      1
+                                  True   False     5
+                                         True      1
+              True   True  False  False  False     3
+                                  True   False     1
+                                         True      2
+                           True   False  False     2
+                                         True      1
+                                  True   False     3
+       True   False  True  False  False  False     4
+                                  True   False     2
+                           True   False  True      1
+                                  True   False     1
+              True   True  False  False  False     3
+                                         True      2
+                                  True   False     2
+True   False  False  True  False  False  False     4
+                                  True   False     3
+                                         True      1
+                           True   False  False     4
+                                         True      4
+                                  True   False     1
+                                         True      1
+              True   True  False  False  False     1
+                                         True      1
+                                  True   False     1
+                                         True      1
+                           True   True   False     3
+       True   False  True  False  False  False     1
+                                         True      1
+                                  True   False     2
+                           True   False  False     3
+                                  True   False     1
+              True   True  False  False  False     1
+                                  True   False     3
+dtype: int64
+
+self.P['I_45'] = counts / self._P_sizes[child]
+I_0    I_59   I_60   I_69  I_89   I_90   I_91   I_45 
+False  False  False  True  False  False  False  False    0.818182
+                                                True     0.181818
+                                         True   False    1.000000
+                                  True   False  False    0.333333
+                                                True     0.666667
+                                         True   False    1.000000
+                           True   False  False  False    0.923077
+                                                True     0.076923
+                                         True   True     1.000000
+                                  True   False  False    0.600000
+                                                True     0.400000
+                                         True   True     1.000000
+              True   True  False  False  False  False    0.666667
+                                                True     0.333333
+                                  True   False  False    1.000000
+                                         True   False    0.500000
+                                                True     0.500000
+                           True   False  False  False    0.500000
+                                                True     0.500000
+                                         True   False    1.000000
+                                  True   False  False    0.666667
+                                                True     0.333333
+       True   False  True  False  False  False  False    0.750000
+                                                True     0.250000
+                                  True   False  False    0.500000
+                                                True     0.500000
+                           True   False  True   False    1.000000
+                                  True   False  False    1.000000
+              True   True  False  False  False  False    0.666667
+                                                True     0.333333
+                                         True   False    1.000000
+                                  True   False  True     1.000000
+True   False  False  True  False  False  False  False    0.500000
+                                                True     0.500000
+                                  True   False  False    0.666667
+                                                True     0.333333
+                                         True   True     1.000000
+                           True   False  False  False    0.750000
+                                                True     0.250000
+                                         True   False    0.750000
+                                                True     0.250000
+                                  True   False  False    1.000000
+                                         True   True     1.000000
+              True   True  False  False  False  True     1.000000
+                                         True   True     1.000000
+                                  True   False  True     1.000000
+                                         True   True     1.000000
+                           True   True   False  False    0.666667
+                                                True     0.333333
+       True   False  True  False  False  False  True     1.000000
+                                         True   True     1.000000
+                                  True   False  True     1.000000
+                           True   False  False  True     1.000000
+                                  True   False  True     1.000000
+              True   True  False  False  False  True     1.000000
+                                  True   False  False    0.333333
+                                                True     0.666667
+dtype: float64

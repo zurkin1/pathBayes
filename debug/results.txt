@@ -13,18 +13,19 @@ adjusted_rand_score: 0.014770410963110254
 normalized_mutual_info_score: 0.0024813651997607853
 
 orig
-(.venv) C:\github>C:/github/.venv/Scripts/python.exe c:/github/PathBayes/code/benchmark.py
 Data shape: (577, 314)
 activity data shape after outlier cleanup: (514, 314)
 activity data shape after TCGA filter: (510, 314)
-Silhouette Score: 0.2577930697371938
-Calinski-Harabasz Index: 79.26516053310567
-Special accuracy: 0.6019607843137255
-completeness score: 0.011816650656740885
-homogeneity_score: 0.00799653787073099
-adjusted_mutual_info_score: 0.003274725283334329
-adjusted_rand_score: -0.027444041095547198
-normalized_mutual_info_score: 0.00953832285508301
+| Metric                       |     Value |
+|------------------------------|-----------|
+| Silhouette Score             |  0.257793 |
+| Calinski-Harabasz Index      | 79.265435 |
+| Special accuracy             |  0.609804 |
+| Completeness score           |  0.003864 |
+| Homogeneity score            |  0.002615 |
+| Adjusted mutual info score   | -0.003185 |
+| Adjusted rand score          |  0.006935 |
+| Normalized mutual info score |  0.003119 |
 
 (.venv) C:\github>C:/github/.venv/Scripts/python.exe c:/github/PathBayes/code/benchmark.py
 Data shape: (577, 314)
@@ -39,33 +40,16 @@ adjusted_mutual_info_score: 0.00197838045250832
 adjusted_rand_score: 0.02846200725139425
 normalized_mutual_info_score: 0.006755948021670517
 
-(venv) [zurkin@dsicscpu01 code]$ python benchmark.py
 Data shape: (577, 314)
 activity data shape after outlier cleanup: (514, 314)
 activity data shape after TCGA filter: (510, 314)
-/home/dsi/zurkin/github/venv/lib64/python3.9/site-packages/sklearn/manifold/_spectral_embedding.py:329: UserWarning: Graph is not fully connected, spectral embedding may not work as expected.
-  warnings.warn(
-Silhouette Score: 0.7981265570904805
-Calinski-Harabasz Index: 1707.7019766367691
-Special accuracy: 0.4411764705882353
-completeness score: 0.0011866371390949002
-homogeneity_score: 0.0011514146731888384
-adjusted_mutual_info_score: -0.004223282620351581
-adjusted_rand_score: -0.0019030959829315908
-normalized_mutual_info_score: 0.0011687605950615105
-(venv) [zurkin@dsicscpu01 code]$
-
-(.venv) C:\github>C:/github/.venv/Scripts/python.exe c:/github/PathBayes/code/benchmark.py
-Data shape: (577, 314)
-activity data shape after outlier cleanup: (514, 314)
-activity data shape after TCGA filter: (510, 314)
-C:\github\.venv\Lib\site-packages\sklearn\manifold\_spectral_embedding.py:328: UserWarning: Graph is not fully connected, spectral embedding may not work as expected.
-  warnings.warn(
-Silhouette Score: 0.13457178465732098
-Calinski-Harabasz Index: 55.13088941791828
-Special accuracy: 0.4647058823529412
-completeness score: 0.008495223179285468
-homogeneity_score: 0.009922398294167627
-adjusted_mutual_info_score: 0.0046084522056632354
-adjusted_rand_score: 0.029792449272412612
-normalized_mutual_info_score: 0.009153515083824929
+| Metric                       |     Value |
+|------------------------------|-----------|
+| Silhouette Score             |  0.253782 |
+| Calinski-Harabasz Index      | 77.441825 |
+| Special accuracy             |  0.607843 |
+| Completeness score           |  0.002901 |
+| Homogeneity score            |  0.001940 |
+| Adjusted mutual info score   | -0.004017 |
+| Adjusted rand score          | -0.007082 |
+| Normalized mutual info score |  0.002325 |

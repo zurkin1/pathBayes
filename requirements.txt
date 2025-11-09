@@ -7,3 +7,5 @@ networkx
 matplotlib
 umap-learn
 bnlearn
+tabulate
+decoupler

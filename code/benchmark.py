@@ -20,7 +20,7 @@ from metrics import *
 def load_tcga_data(expression_file, labels_file):
     """Load TCGA CRC expression data and CMS labels"""
     
-    # Load activity data (genes × samples)  # (samples (rows) × pathways (columns)) activity.shape = 472 x 314
+    # Load activity data (genes × samples)  # (samples (rows) × pathways (columns)) 314 pathways.
     activity = pd.read_csv(expression_file, index_col=0).T
     print(f"Data shape: {activity.shape}")
     
@@ -111,8 +111,7 @@ labels = ['MSI-H', 'MSS', 'MSI-L'] #'CMS1', 'CMS2', 'CMS3', 'CMS4'
 if __name__ == "__main__":
     """Main benchmark pipeline"""   
     # Load data
-    expression_file=data_path+'output_activity.csv'
-    activity, y_true = load_tcga_data(expression_file=expression_file, labels_file=data_path+'TCGACRC_clinical-merged.csv')
+    activity, y_true = load_tcga_data(data_path+'output_activity.csv', labels_file=data_path+'TCGACRC_clinical-merged.csv')
 
     # Select CMS-relevant pathways (optional - comment out to use all pathways)
     #activity = select_cms_relevant_pathways(activity)
@@ -126,7 +125,7 @@ if __name__ == "__main__":
     #activity = pca.fit_transform(activity)
     #print(f"PCA explained variance ratio: {pca.explained_variance_ratio_.sum():.3f}")
        
-    # Cluster
+    # Cluster requires (n_samples, n_features).
     #print("Clustering (k=3)...")
     # Convert labels to numeric for metrics
     kmeans = clustering(activity, n_clusters=3)

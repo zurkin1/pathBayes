@@ -71,11 +71,7 @@ def build_bayesnet(interactions, sample_udp):
         P(I2 | I1=True)  = UDP(g)
         P(I2 | I1=False) = CPT_BASELINE
     """
-    G = nx.DiGraph()
-
-    #Normalize
-    #min_v, max_v = np.min(sample_udp), np.max(sample_udp)
-    #sample_udp = (sample_udp - min_v) / (max_v - min_v + 1e-9)
+    G = nx.MultiDiGraph() #We can have multiple edges between two interactions.
 
     # Create edges between interactions via shared genes
     for i1, (src1, t1, tgt1, _) in enumerate(interactions):
@@ -94,12 +90,20 @@ def build_bayesnet(interactions, sample_udp):
                 udp = to_prob_power(udp_orig)
                 if is_inhibitory(t2):
                     udp = 1 - udp
-                G.add_edge(i1, i2, udp=udp) # Keep udp as attribute.
+                G.add_edge(i1, i2, gene=g, udp=udp) # Keep udp as attribute.
 
     return G
 
 
-def update_belief(G, query):
+def update_belief(G, query, sample_udp):
+    min_v, max_v = np.min(sample_udp), np.max(sample_udp)
+    
+    
+    #Normalize
+    def nor(x):
+         return (x - min_v) / (max_v - min_v + 1e-9)
+    
+    
     parents = list(G.predecessors(query))
 
     # Collect scaled parent contributions
@@ -107,16 +111,22 @@ def update_belief(G, query):
     for p in parents:
         scale = 1/len(parents)
         belief_p = G.nodes[p].get('belief', scale) # default neutral belief
-        udp = G[p][query].get("udp", 0)
-        scaled.append(belief_p * udp)
-
+        #Loop over all edges between nodes query and p e.g.:{0: {'gene': 'TP53', 'udp': 0.8}, 1: {'gene': 'EGFR', 'udp': 0.5}}.
+        scaled_p_belief = []
+        for key, attr in G[p][query].items():
+            udp = nor(attr.get("udp"))
+            scaled_p_belief.append(belief_p*udp)
+        scaled.append(np.mean(scaled_p_belief) * scale)
+    
+    B_orig = G.nodes[query].get('belief')
     # Noisy-OR aggregation: P = 1 - ∏(1 - scaled_i)
     if scaled:
         B = 1 - np.prod([1 - s for s in scaled])
     else:
         B = 0.5 # prior for root nodes
-
-    G.nodes[query]['belief'] = float(np.clip(B, 1e-6, 1 - 1e-6))
+    
+    alpha = 0.3
+    G.nodes[query]['belief'] = alpha*B + (1-alpha)*B_orig
 
 
 def process_sample(sample_udp: pd.Series):
@@ -126,9 +136,9 @@ def process_sample(sample_udp: pd.Series):
 
     for path, interactions in pathway_interactions.items():
         G = build_bayesnet(interactions, sample_udp)
-        # Query and update beliefs P(node=True) of all nodes.
+        #Update beliefs P(node=True) of all nodes.
         for node in G.nodes: #Already sorted in topological order.
-            update_belief(G, node)
+            update_belief(G, node, sample_udp)
 
         activities[path] = float(np.mean([G.nodes[p].get('belief', 0.5) for p in G.nodes]))
 

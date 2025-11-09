@@ -12,6 +12,7 @@ from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 from config import *
 from umap import UMAP
+from tabulate import tabulate
 
 
 #General metric functions used in the benchmarks.
@@ -133,17 +134,20 @@ def calc_stats(act_mat, true_labels, pred_labels, debug=False):
     nmi = normalized_mutual_info_score(true_labels, pred_labels)
 
     if debug:
-        print(f"Silhouette Score: {Silhouette}")
-        print(f"Calinski-Harabasz Index: {Calinski}")
-        print(f"Special accuracy: {Special}")
-        print(f'completeness score: {Completeness}')
-        print(f"homogeneity_score: {Homogeneity}")
-        print(f"adjusted_mutual_info_score: {Adjusted}")
-        print(f"adjusted_rand_score: {ari}")
-        print(f"normalized_mutual_info_score: {nmi}")
+        data = [
+            ("Silhouette Score", Silhouette),
+            ("Calinski-Harabasz Index", Calinski),
+            ("Special accuracy", Special),
+            ("Completeness score", Completeness),
+            ("Homogeneity score", Homogeneity),
+            ("Adjusted mutual info score", Adjusted),
+            ("Adjusted rand score", ari),
+            ("Normalized mutual info score", nmi),
+        ]
+        print(tabulate(data, headers=["Metric", "Value"], tablefmt="github", floatfmt=".6f"))
 
     # Plot: True vs Predicted clusters (scatter plot using PCA for visualization)
-    embedding = UMAP(n_neighbors=15, min_dist=0.3, random_state=42).fit_transform(act_mat)
+    embedding = UMAP(n_neighbors=15, min_dist=0.3, random_state=42, n_jobs=1).fit_transform(act_mat)
     fig, ax = plt.subplots(1, 2, figsize=(12, 5))
     for i, (labels, title) in enumerate([(true_labels, "True Labels"),
                                         (pred_labels, "Predicted Clusters")]):
