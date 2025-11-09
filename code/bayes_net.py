@@ -331,8 +331,10 @@ class BayesNet:
             ts.add(node, *self.parents.get(node, []))
         self.nodes = list(ts.static_order())
 
-        self.P = {}
+        self.P = {} #Conditional probability tables.
         self._P_sizes = {}
+        self.B = {} #Beliefs table.
+        self.G = {}
 
     def prepare(self) -> "BayesNet":
         """Perform house-keeping.
@@ -451,7 +453,7 @@ class BayesNet:
         return fjd / fjd.sum()
 
     def partial_fit(self, X: pd.DataFrame):
-        """Update the parameters of each conditional distribution."""
+        """Update the parameters of each conditional distribution P. X: sample set."""
 
         # Compute the conditional distribution for each node that has parents
         for idx, (child, parents) in enumerate(self.parents.items()):
@@ -498,7 +500,7 @@ class BayesNet:
         return self
 
     def fit(self, X: pd.DataFrame):
-        """Find the values of each conditional distribution."""
+        """Find the values of each conditional distribution. Recalculate all Ps."""
         self.P = {}
         self._P_sizes = {}
         return self.partial_fit(X)
@@ -515,19 +517,15 @@ class BayesNet:
         init = init or {}
 
         while True:
-
             sample = {}
             likelihood = 1.0
-
             for node in self.nodes:
-
                 # Access P(node | parents(node))
                 P = self.P[node]
                 if node in self.parents:
                     condition = tuple(sample[parent] for parent in self.parents[node])
-                    reduced_set = set(t[:-1] for t in P.cdt.series.index)
                     # If condition not defined in CPT, apply noisy-OR approximation.
-                    if condition in reduced_set:
+                    if condition in self.P[node].cdt.series.index:
                         P_eff = P.cdt[condition]
                     else:
                         # Identify which parents are True.
@@ -576,13 +574,7 @@ class BayesNet:
             The sampling method to use. Possible choices are: forward.
 
         """
-
-        if method == "forward":
-            sampler = (sample for sample, _ in self._forward_sample(init))
-
-        else:
-            raise ValueError("Unknown method, must be one of: forward")
-
+        sampler = (sample for sample, _ in self._forward_sample(init))
         if n > 1:
             return pd.DataFrame(next(sampler) for _ in range(n)).sort_index(
                 axis="columns"
@@ -732,7 +724,7 @@ class BayesNet:
         state = self.sample(init=event)
 
         samples = {var: [None] * n_iterations for var in query}
-        cycle = itertools.cycle(nonevents)  # arbitrary order, it doesn't matter
+        cycle = itertools.cycle(nonevents) # arbitrary order, it doesn't matter
 
         for i in range(n_iterations):
 
@@ -773,18 +765,14 @@ class BayesNet:
         Name: P(Rain), dtype: float64
 
         """
-
-        # We start by determining which nodes can be discarded. We can remove any leaf node that is
-        # part of query variable(s) or the event variable(s). After a leaf node has been removed,
-        # there might be some more leaf nodes to be remove, etc. Said otherwise, we can ignore each
-        # node that isn't an ancestor of the query variable(s) or the event variable(s).
+        # We can ignore each node that isn't an ancestor of the query variable(s) or the event variable(s).
         relevant = {*query, *event}
         for node in list(relevant):
-            relevant |= self.ancestors(node)
+            relevant = relevant.union(self.parents.get(node, set({}))) #self.ancestors(node)
         hidden = relevant - {*query, *event}
 
         factors = []
-        for idx, node in enumerate(relevant):
+        for node in relevant:
             factor = self.P[node].copy()
             # Filter each factor according to the event
             for var, val in event.items():
@@ -811,11 +799,35 @@ class BayesNet:
         )
         return posterior
 
+    def _pathbayes(self, *query, event):
+        """
+        PathBayes query method.
+        """
+        # We can ignore each node that isn't an ancestor of the query variable(s) or the event variable(s).
+        query = query[0]
+        parents = self.parents.get(query, [])
+
+        # Collect scaled parent contributions
+        scaled = []
+        for p in parents:
+            belief_p = self.B.get(p, 0.5) # default neutral belief
+            udp = self.G[p][query].get("udp", "")
+            scaled.append(belief_p * udp)
+
+        # Noisy-OR aggregation: P = 1 - ∏(1 - scaled_i)
+        if scaled:
+            B = 1 - np.prod([1 - s for s in scaled])
+        else:
+            B = 0.5 # prior for root nodes
+
+        self.B[query] = float(np.clip(B, 1e-6, 1 - 1e-6))
+
+
     def query(
         self,
         *query: typing.Tuple[str],
         event: dict,
-        algorithm="exact",
+        algorithm="pathbayes",
         n_iterations=100,
     ) -> pd.Series:
         """Answer a probabilistic query.
@@ -862,7 +874,11 @@ class BayesNet:
             if q in event:
                 raise ValueError("A query variable cannot be part of the event")
 
-        if algorithm == "exact":
+        if algorithm == "pathbayes":
+            answer = self._pathbayes(*query, event=event)
+            return
+
+        elif algorithm == "exact":
             answer = self._variable_elimination(*query, event=event)
 
         elif algorithm == "gibbs":
