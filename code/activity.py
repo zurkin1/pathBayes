@@ -6,7 +6,7 @@ import warnings
 from metrics import *
 
 
-warnings.simplefilter("error", RuntimeWarning)
+warnings.simplefilter("error", RuntimeWarning) #Stop on warnings.
 
 
 # Load and parse interactions into simple pathway_interactions dictionary data structure. e.g.
@@ -36,32 +36,31 @@ def is_inhibitory(interaction_type):
     return any(keyword in interaction_type.lower() for keyword in inhibitory_keywords)
 
 
-def initialize_node_beliefs(interactions, sample_udp):
+def initialize_node_belief(interaction, sample_udp):
     """
-    Initialize each node's belief (activity) based on its genes.
+    Initialize a node's belief (activity) based on its genes.
     """
-    beliefs = {}
-    for i, (src_genes, itype, tgt_genes, _) in enumerate(interactions):
-        src_activity, tgt_activity = 1.0, 1.0
+    belief = 0.0
+    src_activity, tgt_activity = 0.0, 0.0
+    (src_genes, itype, tgt_genes, _) = interaction
 
-        # Compute input (source) activity
-        for g in src_genes:
-            if g in sample_udp:
-                src_activity *= sample_udp[g]
+    # Compute input (source) activity
+    for g in src_genes:
+        if g in sample_udp:
+            src_activity += sample_udp[g]
 
-        # Compute output (target) activity
-        for g in tgt_genes:
-            if g in sample_udp:
-                tgt_activity *= sample_udp[g]
-        tgt_activity = max(1e-10, tgt_activity)
+    # Compute output (target) activity
+    for g in tgt_genes:
+        if g in sample_udp:
+            tgt_activity += sample_udp[g]
+    tgt_activity = max(1e-10, tgt_activity)
 
-        # Scale ratio
-        belief = gaussian_scaling(src_activity, tgt_activity)
-        if is_inhibitory(itype):
-            belief = 1.0 - np.clip(belief, 0, 1) # inverse for inhibitory
+    # Scale ratio
+    belief = gaussian_scaling(src_activity, tgt_activity)
+    if is_inhibitory(itype):
+        belief =  -belief # inverse for inhibitory
 
-        beliefs[i] = float(np.clip(belief, 1e-6, 1 - 1e-6))
-    return beliefs
+    return belief
 
 
 def build_bayesnet(interactions, sample_udp):
@@ -75,22 +74,18 @@ def build_bayesnet(interactions, sample_udp):
     G = nx.DiGraph()
 
     #Normalize
-    min_v, max_v = np.min(sample_udp), np.max(sample_udp)
-    sample_udp = (sample_udp - min_v) / (max_v - min_v + 1e-9)
-
-    # --- Initialize node beliefs ---
-    init_beliefs = initialize_node_beliefs(interactions, sample_udp)
-    for node, b in init_beliefs.items():
-        if node in G.nodes:
-            G.nodes[node]['belief'] = b
+    #min_v, max_v = np.min(sample_udp), np.max(sample_udp)
+    #sample_udp = (sample_udp - min_v) / (max_v - min_v + 1e-9)
 
     # Create edges between interactions via shared genes
     for i1, (src1, t1, tgt1, _) in enumerate(interactions):
         for i2, (src2, t2, tgt2, _) in enumerate(interactions):
             if not i1 in G:
-                G.add_node(i1)
+                belief = initialize_node_belief((src1, t1, tgt1, _), sample_udp)
+                G.add_node(i1, belief=belief)
             if not i2 in G:
-                G.add_node(i2)
+                belief = initialize_node_belief((src2, t2, tgt2, _), sample_udp)
+                G.add_node(i2, belief=belief)
             if i1 == i2:
                 continue
             shared = set(tgt1) & set(src2)
@@ -105,26 +100,23 @@ def build_bayesnet(interactions, sample_udp):
 
 
 def update_belief(G, query):
-        """
-        PathBayes query method.
-        """
-        parents = list(G.predecessors(query))
+    parents = list(G.predecessors(query))
 
-        # Collect scaled parent contributions
-        scaled = []
-        for p in parents:
-            scale = 1/len(parents)
-            belief_p = G.nodes[p].get('belief', scale) # default neutral belief
-            udp = G[p][query].get("udp", 0)
-            scaled.append(belief_p * udp)
+    # Collect scaled parent contributions
+    scaled = []
+    for p in parents:
+        scale = 1/len(parents)
+        belief_p = G.nodes[p].get('belief', scale) # default neutral belief
+        udp = G[p][query].get("udp", 0)
+        scaled.append(belief_p * udp)
 
-        # Noisy-OR aggregation: P = 1 - ∏(1 - scaled_i)
-        if scaled:
-            B = 1 - np.prod([1 - s for s in scaled])
-        else:
-            B = 0.5 # prior for root nodes
+    # Noisy-OR aggregation: P = 1 - ∏(1 - scaled_i)
+    if scaled:
+        B = 1 - np.prod([1 - s for s in scaled])
+    else:
+        B = 0.5 # prior for root nodes
 
-        G.nodes[query]['belief'] = float(np.clip(B, 1e-6, 1 - 1e-6))
+    G.nodes[query]['belief'] = float(np.clip(B, 1e-6, 1 - 1e-6))
 
 
 def process_sample(sample_udp: pd.Series):
