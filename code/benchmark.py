@@ -21,7 +21,7 @@ def load_tcga_data(expression_file, labels_file):
     """Load TCGA CRC expression data and CMS labels"""
     
     # Load activity data (genes × samples)  # (samples (rows) × pathways (columns)) activity.shape = 472 x 314
-    activity = pd.read_csv(expression_file, index_col=0)
+    activity = pd.read_csv(expression_file, index_col=0).T
     print(f"Data shape: {activity.shape}")
     
     # Load CMS labels

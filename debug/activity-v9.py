@@ -1,12 +1,8 @@
 import pandas as pd
 import numpy as np
 from config import *
+from bayes_net import BayesNet
 import networkx as nx
-import warnings
-from metrics import *
-
-
-warnings.simplefilter("error", RuntimeWarning)
 
 
 # Load and parse interactions into simple pathway_interactions dictionary data structure. e.g.
@@ -36,34 +32,6 @@ def is_inhibitory(interaction_type):
     return any(keyword in interaction_type.lower() for keyword in inhibitory_keywords)
 
 
-def initialize_node_beliefs(interactions, sample_udp):
-    """
-    Initialize each node's belief (activity) based on its genes.
-    """
-    beliefs = {}
-    for i, (src_genes, itype, tgt_genes, _) in enumerate(interactions):
-        src_activity, tgt_activity = 1.0, 1.0
-
-        # Compute input (source) activity
-        for g in src_genes:
-            if g in sample_udp:
-                src_activity *= sample_udp[g]
-
-        # Compute output (target) activity
-        for g in tgt_genes:
-            if g in sample_udp:
-                tgt_activity *= sample_udp[g]
-        tgt_activity = max(1e-10, tgt_activity)
-
-        # Scale ratio
-        belief = gaussian_scaling(src_activity, tgt_activity)
-        if is_inhibitory(itype):
-            belief = 1.0 - np.clip(belief, 0, 1) # inverse for inhibitory
-
-        beliefs[i] = float(np.clip(belief, 1e-6, 1 - 1e-6))
-    return beliefs
-
-
 def build_bayesnet(interactions, sample_udp):
     """
     Build a BayesNet for a single pathway using sorobn.
@@ -72,59 +40,57 @@ def build_bayesnet(interactions, sample_udp):
         P(I2 | I1=True)  = UDP(g)
         P(I2 | I1=False) = CPT_BASELINE
     """
-    G = nx.DiGraph()
+    nodes, edges, inhibitory = [], [], []
 
-    #Normalize
-    min_v, max_v = np.min(sample_udp), np.max(sample_udp)
-    sample_udp = (sample_udp - min_v) / (max_v - min_v + 1e-9)
-
-    # --- Initialize node beliefs ---
-    init_beliefs = initialize_node_beliefs(interactions, sample_udp)
-    for node, b in init_beliefs.items():
-        if node in G.nodes:
-            G.nodes[node]['belief'] = b
+    # Create nodes for all interactions.
+    for idx in range(len(interactions)):
+        src_genes, itype, tgt_genes, _ = interactions[idx]
+        node = f"I_{idx}"
+        nodes.append(node)
+        if is_inhibitory(itype):
+            inhibitory.append(node)
 
     # Create edges between interactions via shared genes
     for i1, (src1, t1, tgt1, _) in enumerate(interactions):
         for i2, (src2, t2, tgt2, _) in enumerate(interactions):
-            if not i1 in G:
-                G.add_node(i1)
-            if not i2 in G:
-                G.add_node(i2)
-            if i1 == i2:
-                continue
             shared = set(tgt1) & set(src2)
             for g in shared:
+                edges.append((f"I_{i1}", f"I_{i2}", g))
+
+    # Add edges: keep only valid (u, v) pairs of distinct strings
+    G = nx.DiGraph()
+    for e in edges:
+        if isinstance(e, (list, tuple)) and len(e) == 3:
+            u, v, g = e
+            if isinstance(u, str) and isinstance(v, str) and u != v:
                 udp_orig = np.clip(float(sample_udp.get(g, 0.0)), 1e-6, 1 - 1e-6)
                 udp = to_prob_power(udp_orig)
-                if is_inhibitory(t2):
+                if v in inhibitory:
                     udp = 1 - udp
-                G.add_edge(i1, i2, udp=udp) # Keep udp as attribute.
+                G.add_edge(u, v, udp=udp) # Keep udp as attribute.
 
-    return G
+    # --- Detect and remove cycles ---
+    try:
+        cycle = list(nx.find_cycle(G, orientation='original'))
+        while len(cycle) > 0:
+            u, v, _ = cycle[0]
+            #if DEBUG:
+            #    print(f"⚠️ Removing edge {u}->{v} to break cycle.")
+            G.remove_edge(u, v)
+            cycle = list(nx.find_cycle(G, orientation='original'))
+    except nx.NetworkXNoCycle:
+        pass
 
+    # Initialize network
+    bn = BayesNet(*( (u, v) for u, v in G.edges ), seed=42)
+    bn.G = G
 
-def update_belief(G, query):
-        """
-        PathBayes query method.
-        """
-        parents = list(G.predecessors(query))
+    # Assign CPTs for nodes in proper Series format.
+    #Assume conditional independence of causes given the child (as in Noisy-OR).
+    for v in G.nodes:
+        bn.P[v] = pd.Series({True: 0.5, False: 0.5})
 
-        # Collect scaled parent contributions
-        scaled = []
-        for p in parents:
-            scale = 1/len(parents)
-            belief_p = G.nodes[p].get('belief', scale) # default neutral belief
-            udp = G[p][query].get("udp", 0)
-            scaled.append(belief_p * udp)
-
-        # Noisy-OR aggregation: P = 1 - ∏(1 - scaled_i)
-        if scaled:
-            B = 1 - np.prod([1 - s for s in scaled])
-        else:
-            B = 0.5 # prior for root nodes
-
-        G.nodes[query]['belief'] = float(np.clip(B, 1e-6, 1 - 1e-6))
+    return bn
 
 
 def process_sample(sample_udp: pd.Series):
@@ -133,12 +99,18 @@ def process_sample(sample_udp: pd.Series):
     activities = {}
 
     for path, interactions in pathway_interactions.items():
-        G = build_bayesnet(interactions, sample_udp)
-        # Query and update beliefs P(node=True) of all nodes.
-        for node in G.nodes: #Already sorted in topological order.
-            update_belief(G, node)
+        bn = build_bayesnet(interactions, sample_udp)
 
-        activities[path] = float(np.mean([G.nodes[p].get('belief', 0.5) for p in G.nodes]))
+        #Update_beliefs_via_sampling. Get n_samples of boolean states for all nodes in the pathway.
+        #n_samples=100
+        #samples = bn.sample(n_samples)
+        #bn.fit(samples)
+
+        # Query and update beliefs P(node=True) of all nodes.
+        for node in bn.nodes: #Already sorted in topological order.
+            bn.query(node, event={})
+
+        activities[path] = float(np.mean([bn.B[node] for node in bn.G.nodes]))
 
     return activities
 
@@ -156,7 +128,6 @@ def calc_activity(udp_file='./data/output_udp.csv', output_file='./data/output_a
     df_to_process = udp_df.T
     print(f"Processing {len(df_to_process)} samples...")
     results = parallel_apply(df_to_process, process_sample).T
-    results = results.round(4)
     results.to_csv(output_file)
     print(f"Saved results to {output_file}")
     return results
