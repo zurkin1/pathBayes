@@ -22,6 +22,8 @@ def load_tcga_data(expression_file, labels_file):
     
     # Load activity data (genes × samples)  # (samples (rows) × pathways (columns)) 314 pathways.
     activity = pd.read_csv(expression_file, index_col=0).T
+    print(activity.head())
+    #activity = activity.iloc[:100,:]
     print(f"Data shape: {activity.shape}")
     
     # Load CMS labels

@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     """Main benchmark pipeline"""   
     # Load data
-    df = pd.read_csv('./data/TCGACRC_expression-merged.zip', sep='\t', index_col=0).T #, nrows=100
+    df = pd.read_csv('./data/TCGACRC_expression-merged.zip', sep='\t', index_col=0).T #, nrows=100, usecols=range(100)
     print(df.head())
     labels = pd.read_csv('./data/TCGACRC_clinical-merged.csv')
     # Match samples between expression and labels
@@ -72,6 +72,14 @@ if __name__ == "__main__":
         tmin=5,
         verbose=True
     )
+    '''
+    #On older version of decoupler.
+    activity, norm, pvals = decoupler.run_gsea(
+    df,
+    reactome,
+    verbose=True
+    )
+    '''
     print(activity.head())
 
     # Cluster requires (n_samples, n_features).
