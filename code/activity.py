@@ -46,9 +46,10 @@ def is_inhibitory(interaction_type):
 
 def build_pathway_graph_structure(interactions):
     """
-    Build the STATIC graph structure for a pathway.
-    This is called ONCE per pathway and cached.
-    Stores only topology and gene names - no sample-specific data.
+    Build the static graph structure for a pathway.
+    This is called once per pathway and cached.
+    Stores only topology and gene names no sample-specific data.
+    Breaks cycles using edge betweenness centrality.
     
     Returns: NetworkX graph with:
     - Nodes: interaction IDs
@@ -80,7 +81,46 @@ def build_pathway_graph_structure(interactions):
                     int2['id'], 
                     gene=gene # Store which gene creates this connection
                 )
+
+    # Break cycles using edge betweenness centrality
+    max_iterations = 1000 # Safety limit to avoid infinite loops
+    iteration = 0
     
+    while not nx.is_directed_acyclic_graph(G) and iteration < max_iterations:
+        iteration += 1
+        
+        try:
+            # Find a cycle
+            cycle = nx.find_cycle(G, orientation='original')
+            
+            # Extract edges involved in this cycle
+            cycle_edges = [(u, v, k) for u, v, k, _ in cycle]
+            
+            # Calculate edge betweenness for the entire graph
+            # edge_betweenness_centrality doesn't support MultiDiGraph directly
+            # So we need to handle multi-edges separately
+            edge_betweenness = {}
+            
+            # For MultiDiGraph, calculate betweenness on simplified graph
+            # then apply to all parallel edges
+            G_simple = nx.DiGraph(G) # Collapse multi-edges
+            betweenness_simple = nx.edge_betweenness_centrality(G_simple)
+            
+            # Map betweenness to multi-edges
+            for u, v, k in cycle_edges:
+                edge_betweenness[(u, v, k)] = betweenness_simple.get((u, v), 0)
+            
+            # Remove edge with minimum betweenness. For multi edges it will remove (36, 82, 0), then on the next loop (36, 82, 1) and so on.
+            min_edge = min(edge_betweenness.items(), key=lambda x: x[1])[0]
+            G.remove_edge(min_edge[0], min_edge[1], min_edge[2])
+            
+        except nx.NetworkXNoCycle:
+            # No cycle found, we're done
+            break
+    
+    if iteration >= max_iterations:
+        print(f"Warning: Could not break all cycles after {max_iterations} iterations")
+
     return G
 
 
@@ -184,7 +224,7 @@ def process_sample(sample_udp: pd.Series, PATHWAY_GRAPHS):
             node_beliefs[node] = calculate_node_belief(node, G, sample_udp)
         
         # Update beliefs via belief propagation
-        for node in G.nodes: # Assumes topological ordering nx.topological_sort(G)
+        for node in nx.topological_sort(G):
             update_belief_optimized(G, node, sample_udp, node_beliefs)
         
         # Average all node beliefs for pathway activity
