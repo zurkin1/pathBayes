@@ -1,6 +1,0 @@
-pathway,source,interactiontype,target
-test_pathway,A,activation,C
-test_pathway,B,activation,C
-test_pathway,C,activation,D
-test_pathway,D,activation,C
-test_pathway,C,inhibition,E

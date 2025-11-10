@@ -7,9 +7,6 @@ from metrics import *
 
 
 warnings.simplefilter("error", RuntimeWarning) #Stop on warnings.
-# Global cache for pathway graphs.
-# Built once at module load, reused for all samples
-PATHWAY_GRAPHS = {}
 
 
 # Load and parse interactions into simple pathway_interactions dictionary data structure. e.g.
@@ -87,7 +84,7 @@ def build_pathway_graph_structure(interactions):
     return G
 
 
-def initialize_pathway_graphs():
+def initialize_pathway_graphs(PATHWAY_GRAPHS):
     """Build and cache all pathway graph structures once"""
     print("Building pathway graph structures...")
     for pathway, interactions in pathway_interactions.items():
@@ -173,7 +170,7 @@ def update_belief_optimized(G, node, sample_udp, node_beliefs):
         node_beliefs[node] = alpha * B + (1 - alpha) * B_orig
 
 
-def process_sample(sample_udp: pd.Series):
+def process_sample(sample_udp: pd.Series, PATHWAY_GRAPHS):
     """
     Compute pathway activity using CACHED graph structures.
     Only sample-specific computations happen here.
@@ -199,9 +196,11 @@ def process_sample(sample_udp: pd.Series):
 def calc_activity(udp_file='./data/output_udp.csv', output_file='./data/output_activity.csv'):
     """Main entry: load UDP, run pathway analysis, and save activity matrix."""
     
-    # Initialize graph structures ONCE
-    if not PATHWAY_GRAPHS:
-        initialize_pathway_graphs()
+    # Initialize graph structures.
+    # Global cache for pathway graphs.
+    # Built once at module load, reused for all samples
+    PATHWAY_GRAPHS = {}
+    initialize_pathway_graphs(PATHWAY_GRAPHS)
     
     udp_df = pd.read_csv(udp_file, sep='\t', index_col=0)
     udp_df.index = udp_df.index.str.lower()
@@ -209,12 +208,12 @@ def calc_activity(udp_file='./data/output_udp.csv', output_file='./data/output_a
     if DEBUG:
         for col in udp_df.columns:
             print(f"Processing sample {col}...")
-            result = process_sample(udp_df[col])
+            result = process_sample(udp_df[col], PATHWAY_GRAPHS)
         exit(0)
     
     df_to_process = udp_df.T
     print(f"Processing {len(df_to_process)} samples...")
-    results = parallel_apply(df_to_process, process_sample).T
+    results = parallel_apply(df_to_process, process_sample, PATHWAY_GRAPHS).T
     results = results.round(4)
     results.to_csv(output_file)
     print(f"Saved results to {output_file}")
