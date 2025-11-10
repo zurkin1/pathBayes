@@ -43,13 +43,37 @@ normalized_mutual_info_score: 0.006755948021670517
 Data shape: (577, 314)
 activity data shape after outlier cleanup: (514, 314)
 activity data shape after TCGA filter: (510, 314)
-| Metric                       |     Value |
-|------------------------------|-----------|
-| Silhouette Score             |  0.253782 |
-| Calinski-Harabasz Index      | 77.441825 |
-| Special accuracy             |  0.607843 |
-| Completeness score           |  0.002901 |
-| Homogeneity score            |  0.001940 |
-| Adjusted mutual info score   | -0.004017 |
-| Adjusted rand score          | -0.007082 |
-| Normalized mutual info score |  0.002325 |
+| Metric                       |      Value |
+|------------------------------|------------|
+| Silhouette Score             |   0.302731 |
+| Calinski-Harabasz Index      | 104.183190 |
+| Special accuracy             |   0.619608 |
+| Completeness score           |   0.003172 |
+| Homogeneity score            |   0.002172 |
+| Adjusted mutual info score   |  -0.003698 |
+| Adjusted rand score          |   0.028530 |
+| Normalized mutual info score |   0.002578 |
+
+(.venv) C:\github\PathBayes\code>python reorder_pathways.py
+  4%|██████▏                                                                                                                                               | 13/314 [00:05<01:39,  3.04it/s]⚠️ Warning: could not break all cycles after max iterations.
+⚠️ Still cyclic pathway, skipping topo order for Arachidonic acid metabolism
+ 25%|█████████████████████████████████████▋                                                                                                                | 79/314 [05:31<08:25,  2.15s/it]⚠️ Warning: could not break all cycles after max iterations.
+⚠️ Still cyclic pathway, skipping topo order for M NFatty acid degradation
+ 26%|███████████████████████████████████████▋                                                                                                              | 83/314 [06:24<24:42,  6.42s/it]⚠️ Warning: could not break all cycles after max iterations.
+⚠️ Still cyclic pathway, skipping topo order for M NGlycine serine and threonine metabolism
+ 27%|████████████████████████████████████████▌                                                                                                             | 85/314 [07:21<52:20, 13.71s/it]⚠️️ Warning: could not break all cycles after max iterations.
+⚠️ Still cyclic pathway, skipping topo order for M NGlycosphingolipid biosynthesis - lacto and neolacto series
+ 32%|███████████████████████████████████████████████▎                                                                                                      | 99/314 [09:35<22:25,  6.26s/it]⚠️ Warning: could not break all cycles after max iterations.
+⚠️ Still cyclic pathway, skipping topo order for M NPurine metabolism
+ 33%|████████████████████████████████████████████████▋                                                                                                  | 104/314 [15:35<1:38:57, 28.28s/it]⚠️ Warning: could not break all cycles after max iterations.
+⚠️ Still cyclic pathway, skipping topo order for M NSteroid hormone biosynthesis
+ 35%|███████████████████████████████████████████████████                                                                                                | 109/314 [22:13<1:56:46, 34.18s/it]⚠️ Warning: could not break all cycles after max iterations.
+⚠️ Still cyclic pathway, skipping topo order for MAlanine aspartate and glutamate metabolism
+ 37%|███████████████████████████████████████████████████████                                                                                              | 116/314 [23:21<39:49, 12.07s/it]⚠️ Warning: could not break all cycles after max iterations.
+⚠️ Still cyclic pathway, skipping topo order for Metabolism of xenobiotics by cytochrome P450
+ 39%|█████████████████████████████████████████████████████████▍                                                                                           | 121/314 [24:02<31:59,  9.95s/it]⚠️ Warning: could not break all cycles after max iterations.
+⚠️ Still cyclic pathway, skipping topo order for MFatty acid biosynthesis
+ 90%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▊              | 284/314 [29:54<00:19,  1.56it/s]⚠️ Warning: could not break all cycles after max iterations.
+⚠️ Still cyclic pathway, skipping topo order for Retinol metabolism
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 314/314 [30:34<00:00,  5.84s/it] 
+✅ Saved topologically ordered pathways to ./data/pathway_relations_toposorted.csv

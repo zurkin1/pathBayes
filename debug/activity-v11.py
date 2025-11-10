@@ -1,11 +1,9 @@
 import pandas as pd
 import numpy as np
+from config import *
 import networkx as nx
 import warnings
 from metrics import *
-import multiprocessing as mp
-from tqdm import tqdm
-from functools import partial
 
 
 warnings.simplefilter("error", RuntimeWarning) #Stop on warnings.
@@ -94,68 +92,98 @@ def initialize_pathway_graphs(PATHWAY_GRAPHS):
     print(f"Built {len(PATHWAY_GRAPHS)} pathway graphs")
 
 
-def diffuse_pathway_activity(G, sample_udp, alpha=0.85, max_iter=100, tol=1e-6):
+def calculate_node_belief(node_id, G, sample_udp):
     """
-    Diffusion-based pathway activity calculation.
-    Edges carry UDP-derived weights (normalized), representing diffusion capacity.
-    Nodes = interactions; edges = shared genes.
-    Steps:
-    1) Assign edge weights = normalized UDP of connecting gene.
-    2) Build stochastic transition matrix W.
-    3) Run random-walk-with-restart until steady state.
-    4) Return mean steady-state activation of nodes (optionally leaves only).
+    Calculate belief for a node on-the-fly based on current sample.
     """
-    nodes = list(G.nodes)
-    n = len(nodes)
-    node_index = {n: i for i, n in enumerate(nodes)}
+    src_genes = G.nodes[node_id]['source_genes']
+    tgt_genes = G.nodes[node_id]['target_genes']
+    itype = G.nodes[node_id]['interaction_type']
+    
+    # Compute source and target activities from sample
+    src_activity = sum(sample_udp.get(g, 0.0) for g in src_genes)
+    tgt_activity = sum(sample_udp.get(g, 0.0) for g in tgt_genes)
+    tgt_activity = max(1e-10, tgt_activity)
+    
+    # Scale ratio
+    belief = gaussian_scaling(src_activity, tgt_activity)
+    if is_inhibitory(itype):
+        belief = -belief
+    
+    return belief
 
-    # Build weighted adjacency matrix W based on gene UDP values
-    W = np.zeros((n, n), dtype=float)
-    min_v, max_v = sample_udp.min(), sample_udp.max()
-    norm = lambda x: (x - min_v) / (max_v - min_v + 1e-9)
 
-    for u, v, data in G.edges(data=True):
-        gene = data['gene']
-        udp = norm(sample_udp.get(gene, 0.0))
-        # optional: handle inhibitory edges
-        if is_inhibitory(G.nodes[u]['interaction_type']):
-            udp = -udp
-        W[node_index[u], node_index[v]] += udp
-
-    # Normalize to make stochastic matrix
-    W = W / (W.max() + 1e-9)
-
-    # Restart vector: use the sample’s UDP values aggregated over genes belonging to each node.
-    s = np.zeros(n)
-    for node in nodes:
-        src_genes = G.nodes[node]['source_genes']
-        tgt_genes = G.nodes[node]['target_genes']
-        node_udp = np.mean([sample_udp.get(g, 0.0) for g in src_genes + tgt_genes])
-        s[node_index[node]] = node_udp
-    # Normalize only to prevent explosion, not to erase contrast
-    s /= (np.max(s) + 1e-9)
-
-    # Random walk with restart
-    x = s.copy()
-    for _ in range(max_iter):
-        x_new = alpha * W @ x + (1 - alpha) * s
-        if np.linalg.norm(x_new - x, 1) < tol:
-            x = x_new
-            break
-        x = x_new
-
-    # Average node activations as pathway activity
-    return float(np.mean(x))
+def update_belief_optimized(G, node, sample_udp, node_beliefs):
+    """
+    Update belief for a node using cached graph structure.
+    All sample-specific values (UDP, beliefs) are computed on-the-fly.
+    """
+    min_v = sample_udp.min()
+    max_v = sample_udp.max()
+    
+    def normalize(x):
+        return (x - min_v) / (max_v - min_v + 1e-9)
+    
+    parents = list(G.predecessors(node))
+    
+    if not parents:
+        return # No parents, keep initial belief
+    
+    scaled = []
+    for parent in parents:
+        scale = 1.0 / len(parents)
+        belief_p = node_beliefs.get(parent, scale)
+        
+        # Get all edges from parent to node (multi-edge support)
+        edges_data = G[parent][node]
+        scaled_p_belief = []
+        
+        for edge_key, edge_attr in edges_data.items():
+            gene = edge_attr['gene']
+            
+            # Check if parent's interaction type is inhibitory
+            parent_itype = G.nodes[parent]['interaction_type']
+            is_inhib = is_inhibitory(parent_itype)
+            
+            # Calculate UDP on-the-fly
+            udp = sample_udp.get(gene, 0.0)
+            udp = normalize(udp)
+            udp = to_prob_power(udp)
+            if is_inhib:
+                udp = 1 - udp
+            
+            scaled_p_belief.append(belief_p * udp)
+        
+        scaled.append(np.mean(scaled_p_belief) * scale)
+    
+    # Noisy-OR aggregation
+    if scaled:
+        B_orig = node_beliefs.get(node, 0.5)
+        B = 1 - np.prod([1 - s for s in scaled])
+        alpha = 0.5
+        node_beliefs[node] = alpha * B + (1 - alpha) * B_orig
 
 
 def process_sample(sample_udp: pd.Series, PATHWAY_GRAPHS):
     """
-    Compute diffusion-based pathway activities for one sample.
+    Compute pathway activity using CACHED graph structures.
+    Only sample-specific computations happen here.
     """
     activities = {}
+    
     for pathway, G in PATHWAY_GRAPHS.items():
-        activity = diffuse_pathway_activity(G, sample_udp)
-        activities[pathway] = activity
+        # Initialize beliefs for this sample
+        node_beliefs = {}
+        for node in G.nodes:
+            node_beliefs[node] = calculate_node_belief(node, G, sample_udp)
+        
+        # Update beliefs via belief propagation
+        for node in G.nodes():
+            update_belief_optimized(G, node, sample_udp, node_beliefs)
+        
+        # Average all node beliefs for pathway activity
+        activities[pathway] = float(np.mean(list(node_beliefs.values())))
+    
     return activities
 
 
@@ -184,22 +212,6 @@ def calc_activity(udp_file='./data/output_udp.csv', output_file='./data/output_a
     results.to_csv(output_file)
     print(f"Saved results to {output_file}")
     return results
-
-
-def parallel_apply(df, func, PATHWAY_GRAPHS):
-    """Applies a function to DataFrame rows in parallel, preserving order."""
-    n_cores = max(1, mp.cpu_count() - 2) # leave 2 cores free for OS
-    func_with_pathway = partial(func, PATHWAY_GRAPHS=PATHWAY_GRAPHS)
-    with mp.Pool(n_cores) as pool:
-        results = list(
-            tqdm(
-                pool.imap(func_with_pathway, [row for _, row in df.iterrows()]),
-                total=len(df),
-                desc="Processing samples",
-            )
-        )
-
-    return pd.DataFrame(results, index=df.index)
 
 
 if __name__ == '__main__':

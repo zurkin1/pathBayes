@@ -10,10 +10,27 @@ from sklearn.feature_selection import VarianceThreshold
 import scipy
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
-from config import *
 from umap import UMAP
 from tabulate import tabulate
+import sys
+import os
 
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(CURRENT_DIR)
+if CURRENT_DIR not in sys.path:
+    sys.path.insert(0, CURRENT_DIR)
+DEBUG = False
+
+
+def to_prob_logscale(x, vmax=22.0, eps=1e-6):
+    p = np.log1p(x) / np.log1p(vmax) # log(1+x)/log(1+vmax)
+    return np.clip(p, eps, 1 - eps)
+
+
+def to_prob_power(x, vmax=22.0, alpha=0.5, eps=1e-6):
+    p = (np.power(x, alpha)) / (np.power(vmax, alpha))
+    return np.clip(p, eps, 1 - eps)
 
 #General metric functions used in the benchmarks.
 #Dunn index calculation function.
