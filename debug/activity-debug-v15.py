@@ -17,6 +17,9 @@ import warnings
 from metrics import *
 import multiprocessing as mp
 from tqdm import tqdm
+import numpy as np
+from scipy.sparse.csgraph import maximum_flow
+from scipy.sparse import csr_matrix
 
 
 warnings.simplefilter("error", RuntimeWarning) #Stop on warnings.
@@ -52,7 +55,9 @@ def parse_pathway_interactions(relations_file):
 
 def build_pathway_graph_structure(interactions):
     """
-    Build the static graph structure for a pathway. Stores only topology and gene names no sample-specific data.
+    Build the static graph structure for a pathway.
+    Stores only topology and gene names no sample-specific data.
+    
     Returns: NetworkX graph with:
     - Nodes: interaction IDs
     - Node attrs: source_genes, target_genes, interaction_type
@@ -103,7 +108,7 @@ def build_pathway_graph_structure(interactions):
         if valid_nodes:
             G = G.subgraph(valid_nodes).copy()
 
-    #Remove acycles to create DAG
+    #Remove acycles
     while True:
         try:
             cycle = nx.find_cycle(G, orientation='original')
@@ -136,76 +141,123 @@ def is_inhibitory(interaction_type):
     return any(keyword in interaction_type.lower() for keyword in inhibitory_keywords)
 
 
-def compute_pathway_flow(G, corridors, sample_udp):
+def compute_max_flow_scipy(G, source, sink, sample_udp, scale_factor=1000, debug=False):
     """
-    Compute maximum flow for a pathway using supersource and supersink.
+    Compute maximum flow using scipy's sparse graph implementation.
+    Returns the maximum flow value from source to sink.
     
-    Creates a temporary graph with:
-    - All original nodes and edges with UDP-weighted capacities
-    - A supersource connected to all corridor sources (infinite capacity)
-    - A supersink connected from all corridor sinks (infinite capacity)
-    
-    Returns the maximum flow value from supersource to supersink.
+    Args:
+        scale_factor: Scale float capacities to integers (default 1000 for good precision)
+        debug: Print debugging information
     """
-    if not corridors:
-        return 0.0
+    # Create node index mapping
+    nodes = list(G.nodes())
+    node_to_idx = {node: idx for idx, node in enumerate(nodes)}
+    n = len(nodes)
     
-    # Create a copy of the graph to add supersource/supersink
-    G_flow = G.copy()
-    
-    # Add edge capacities based on UDP values, remove zero-capacity edges
-    edges_to_remove = []
-    for u, v, data in G_flow.edges(data=True):
+    # Build capacity matrix
+    capacity = np.zeros((n, n), dtype=np.int32)
+    for u, v, data in G.edges(data=True):
         genes = data['genes']
         # Sum UDP values for all genes creating this edge
         total_capacity = sum(sample_udp.get(gene, 0.0) for gene in genes)
-        if total_capacity > 0:
-            G_flow[u][v]['capacity'] = total_capacity
-        else:
-            # Mark zero-capacity edges for removal
-            edges_to_remove.append((u, v))
+        # Scale to integer while preserving precision
+        capacity[node_to_idx[u], node_to_idx[v]] = np.int32(total_capacity * scale_factor)
     
-    # Remove zero-capacity edges to avoid numerical issues
-    G_flow.remove_edges_from(edges_to_remove)
-    
-    # Extract unique sources and sinks from corridors
-    sources = list(set(src for src, _ in corridors))
-    sinks = list(set(snk for _, snk in corridors))
-    
-    # Add supersource and supersink nodes
-    supersource = 'SUPERSOURCE'
-    supersink = 'SUPERSINK'
-    
-    G_flow.add_node(supersource)
-    G_flow.add_node(supersink)
-    
-    # Connect supersource to all corridor sources with infinite capacity
-    for source in sources:
-        G_flow.add_edge(supersource, source, capacity=1e9)
-    
-    # Connect all corridor sinks to supersink with infinite capacity
-    for sink in sinks:
-        G_flow.add_edge(sink, supersink, capacity=1e9)
+    # Convert to sparse matrix with explicit integer dtype
+    capacity_sparse = csr_matrix(capacity, dtype=np.int32)
     
     # Compute maximum flow
-    flow_value, flow_dict = nx.maximum_flow(G_flow, supersource, supersink, capacity='capacity', flow_func=nx.algorithms.flow.shortest_augmenting_path)
-    return flow_value
+    source_idx = node_to_idx[source]
+    sink_idx = node_to_idx[sink]
+    
+    if debug:
+        print(f"\n=== DEBUG: source={source}, sink={sink} ===")
+        print(f"Source idx: {source_idx}, Sink idx: {sink_idx}")
+        print(f"Total nodes: {n}, Total edges: {G.number_of_edges()}")
+        
+        # Check if path exists
+        try:
+            path = nx.shortest_path(G, source, sink)
+            print(f"Shortest path exists: {len(path)} nodes")
+            print(f"Path: {path[:5]}..." if len(path) > 5 else f"Path: {path}")
+            
+            # Check capacities along path
+            print("\nCapacities along shortest path:")
+            for i in range(len(path)-1):
+                u, v = path[i], path[i+1]
+                cap = capacity[node_to_idx[u], node_to_idx[v]]
+                genes = G[u][v]['genes']
+                udp_sum = sum(sample_udp.get(gene, 0.0) for gene in genes)
+                print(f"  {u} -> {v}: capacity={cap}, UDP_sum={udp_sum:.4f}, genes={genes}")
+        except nx.NetworkXNoPath:
+            print("NO PATH EXISTS between source and sink!")
+        
+        # Check non-zero capacities
+        nonzero = np.count_nonzero(capacity)
+        print(f"\nNon-zero capacities in matrix: {nonzero}")
+        print(f"Min non-zero capacity: {capacity[capacity > 0].min() if nonzero > 0 else 'N/A'}")
+        print(f"Max capacity: {capacity.max()}")
+    
+    flow = maximum_flow(capacity_sparse, source_idx, sink_idx)
+    
+    if debug:
+        print(f"Flow value (scaled): {flow.flow_value}")
+        print(f"Flow value (original): {flow.flow_value / scale_factor}")
+    
+    # Scale back to original units
+    return flow.flow_value / scale_factor
 
 
 def process_sample(sample_udp: pd.Series):
-    """Compute pathway activities for one sample using NetworkX."""
+    debug=True
+    """Compute pathway activities for one sample using maximum flow."""
     global PATHWAY_GRAPHS
     activities = {}
-
+    
     for pathway, G in PATHWAY_GRAPHS.items():
-        corridors = G.graph.get('corridors', [])        
+        corridors = G.graph.get('corridors', [])
         if not corridors:
             activities[pathway] = 0.0
             continue
         
-        # Compute flow for entire pathway at once
-        flow_value = compute_pathway_flow(G, corridors, sample_udp)
-        activities[pathway] = float(flow_value)
+        if debug:
+            print(f"\n{'='*60}")
+            print(f"PATHWAY: {pathway}")
+            print(f"Corridors: {len(corridors)}")
+        
+        # Compute maximum flow for each corridor
+        total_flow = 0.0
+        valid_corridors = 0
+        zero_flow_count = 0
+        
+        for idx, (source, sink) in enumerate(corridors):
+            try:
+                # Enable debug for first corridor or when flow is zero
+                flow_value = compute_max_flow_scipy(G, source, sink, sample_udp, debug=debug and idx < 2)
+                if flow_value > 0:
+                    total_flow += flow_value
+                    valid_corridors += 1
+                else:
+                    zero_flow_count += 1
+                    if debug and idx < 5:
+                        print(f"*** ZERO FLOW for corridor {idx}: {source} -> {sink}")
+            except Exception as e:
+                if debug:
+                    print(f"ERROR in corridor {idx} ({source} -> {sink}): {e}")
+                continue
+        
+        if debug:
+            print(f"\nSummary for {pathway}:")
+            print(f"  Valid corridors with flow > 0: {valid_corridors}")
+            print(f"  Zero flow corridors: {zero_flow_count}")
+            print(f"  Total flow: {total_flow}")
+        
+        # Average flow across valid corridors
+        if valid_corridors > 0:
+            activities[pathway] = float(total_flow / valid_corridors)
+        else:
+            activities[pathway] = 0.0
     
     return activities
 
@@ -241,7 +293,7 @@ if __name__ == '__main__':
     udp_df = pd.read_csv('./data/TCGACRC_expression-merged.zip', sep='\t', index_col=0)
     udp_df.index = udp_df.index.str.lower()
 
-    DEBUG=False
+    DEBUG=True
     if DEBUG:
         for col in udp_df.columns:
             print(f"Processing sample {col}...")
