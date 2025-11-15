@@ -1,0 +1,92 @@
+pathway,source,interactiontype,target
+pathway,source,interactiontype,target
+Adherens junction,yes1,activation$phosphorylation,fer
+Adherens junction,cdh5,binding/association,cdh5
+Adherens junction,met,inhibition$phosphorylation,ctnnd1
+Adherens junction,heg1,binding/association,krit1
+Adherens junction,egfr*erbb2,inhibition$phosphorylation,ctnnd1
+Adherens junction,igf1r,inhibition$phosphorylation,ctnnb1
+Adherens junction,met,inhibition$phosphorylation,ctnnb1
+Adherens junction,egfr*erbb2,inhibition$phosphorylation,ctnnb1
+Adherens junction,arhgap29,binding/association,rasip1
+Adherens junction,arhgap29,inhibition,rhoa
+Adherens junction,yes1,inhibition$phosphorylation,ctnnd1
+Adherens junction,acp1,activation$dephosphorylation,ctnnb1
+Adherens junction,ptprm,activation$dephosphorylation,ctnnb1
+Adherens junction,ptprb,activation$dephosphorylation,ctnnb1
+Adherens junction,ptprf,activation$dephosphorylation,ctnnb1
+Adherens junction,ptprm,activation$dephosphorylation,ctnnd1
+Adherens junction,ptpn1,activation$dephosphorylation,ctnnb1
+Adherens junction,ptpn6,activation$dephosphorylation,ctnnd1
+Adherens junction,ptprj,activation$dephosphorylation,ctnnd1
+Adherens junction,csnk2a1*csnk2a2*csnk2b*csnk2a3,activation$phosphorylation,ctnnb1
+Adherens junction,lef1*tcf7*tcf7l2*tcf7l1,binding/association,ctnnb1
+Adherens junction,iqgap1,inhibition,ctnnb1
+Adherens junction,cdh1,dissociation,cdh1
+Adherens junction,egfr*erbb2,indirect effect,mapk1*mapk3
+Adherens junction,fgfr1,indirect effect,snai1
+Adherens junction,tgfbr1*tgfbr2,indirect effect,snai1
+Adherens junction,tgfbr1*tgfbr2,indirect effect,smad3*smad4
+Adherens junction,map3k7,activation$phosphorylation,nlk
+Adherens junction,yes1,activation$phosphorylation,fyn
+Adherens junction,fer,inhibition$phosphorylation,ctnnb1
+Adherens junction,fer,inhibition$phosphorylation,ctnnd1
+Adherens junction,cdh5,binding/association,ctnnb1
+Adherens junction,krit1,binding/association,ccm2
+Adherens junction,krit1,binding/association,rap1a*rap1b
+Adherens junction,cdh1,binding/association,cdh1
+Adherens junction,mapk1*mapk3,indirect effect,snai2
+Adherens junction,fyn,inhibition$phosphorylation,ctnnb1
+Adherens junction,fyn,inhibition$phosphorylation,ctnnd1
+Adherens junction,rap1a*rap1b,binding/association,radil*rasip1
+Adherens junction,cdh1,binding/association,ctnnb1
+Adherens junction,cdh1,dissociation,ctnnb1
+Adherens junction,ctnnd1,inhibition,rhoa
+Adherens junction,ctnnd1,activation,rac1*rac2*rac3*cdc42
+Adherens junction,rasip1,binding/association,radil*rasip1
+Adherens junction,ctnnb1,activation,ctnnb1
+Adherens junction,cdc42,activation,iqgap1
+Adherens junction,rac1*rac2*rac3,activation,iqgap1
+Adherens junction,cdc42,indirect effect,rac1*rac2*rac3
+Adherens junction,ctnnb1,binding/association,ccm2
+Adherens junction,rac1*rac2*rac3*cdc42,inhibition,iqgap1
+Adherens junction,ccm2,binding/association,pdcd10
+Adherens junction,ccm2,binding/association,smurf1*smurf2
+Adherens junction,iqgap1,activation,actb*actg1
+Adherens junction,smurf1*smurf2,inhibition$ubiquitination,rhoa
+Adherens junction,rhoa,activation,rock1*rock2
+Adherens junction,rhoa,activation,actb*actg1
+Adherens junction,rock1*rock2,activation$phosphorylation,myl12b*myl9*myl12a*mylpf*myl2*myl5*myl7*myl10
+Adherens junction,actb*actg1,binding/association,afdn
+Adherens junction,afdn,binding/association,nectin3*nectin1*nectin2*nectin4
+Adherens junction,nectin3*nectin1*nectin2*nectin4,binding/association,nectin3*nectin1*nectin2*nectin4
+Adherens junction,nectin3*nectin1*nectin2*nectin4,indirect effect,src
+Adherens junction,nectin3*nectin1*nectin2*nectin4,activation,pard3
+Adherens junction,src,inhibition$phosphorylation,ctnnb1
+Adherens junction,src,activation$phosphorylation,farp2
+Adherens junction,src,indirect effect,rac1*rac2*rac3
+Adherens junction,farp2,activation,cdc42
+Adherens junction,rac1*rac2*rac3,activation,baiap2*wasf2*wasf3*wasf1
+Adherens junction,cdc42,activation,wasl
+Adherens junction,cdc42,activation,was
+Adherens junction,baiap2*wasf2*wasf3*wasf1,activation,actb*actg1
+Adherens junction,wasl,activation,actb*actg1
+Adherens junction,was,activation,actb*actg1
+Adherens junction,actb*actg1,binding/association,actn4*actn1
+Adherens junction,actb*actg1,binding/association,vcl
+Adherens junction,actn4*actn1,binding/association,ssx2ip
+Adherens junction,vcl,binding/association,sorbs1
+Adherens junction,actn4*actn1,binding/association,lmo7
+Adherens junction,ssx2ip,binding/association,afdn
+Adherens junction,sorbs1,binding/association,afdn
+Adherens junction,lmo7,binding/association,afdn
+Adherens junction,afdn,activation,actb*actg1
+Adherens junction,actb*actg1,binding/association,ctnna1*ctnna2*ctnna3
+Adherens junction,ctnna1*ctnna2*ctnna3,binding/association,actn4*actn1
+Adherens junction,ctnna1*ctnna2*ctnna3,binding/association,vcl
+Adherens junction,ctnna1*ctnna2*ctnna3,binding/association,ctnnb1
+Adherens junction,ctnna1*ctnna2*ctnna3,dissociation,ctnnb1
+Adherens junction,ctnna1*ctnna2*ctnna3,dissociation,actb*actg1
+Adherens junction,ctnna1*ctnna2*ctnna3,binding/association,tjp1
+Adherens junction,ctnna1*ctnna2*ctnna3,binding/association,afdn
+Adherens junction,actb*actg1,binding/association,tjp1

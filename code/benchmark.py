@@ -11,7 +11,6 @@ Additional quality control steps like outlier detection and normalization (inclu
 """
 import pandas as pd
 import numpy as np
-from config import *
 from sklearn.preprocessing import Normalizer # Unit norm, row wise. # StandardScaler # Normal distribution. MinMaxScaler # [0,1] range, column wise.
 from sklearn.decomposition import PCA
 from metrics import *

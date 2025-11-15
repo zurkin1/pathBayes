@@ -20,7 +20,6 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 os.chdir(CURRENT_DIR)
 if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
-DEBUG = False
 
 
 def to_prob_logscale(x, vmax=22.0, eps=1e-6):

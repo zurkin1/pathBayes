@@ -1,0 +1,315 @@
+(venv) C:\github>C:\github\venv\Scripts\python.exe c:/github/PathBayes/code/activity.py
+Pathway Adherens junction has 112 corridors.
+Pathway African trypanosomiasis has 10 corridors.
+Pathway AGE-RAGE signaling pathway in diabetic complications has 347 corridors.
+Pathway Alcoholic liver disease has 154 corridors.
+Pathway Alcoholism has 42 corridors.
+Pathway Aldosterone-regulated sodium reabsorption has 16 corridors.
+Pathway Allograft rejection has 4 corridors.
+Pathway Aminoacyl-tRNA biosynthesis has 72 corridors.
+Pathway Amoebiasis has 9 corridors.
+Pathway Amphetamine addiction has 32 corridors.
+Pathway AMPK signaling pathway has 128 corridors.
+Pathway Antifolate resistance has 7 corridors.
+Pathway Apelin signaling pathway has 21 corridors.
+Pathway Apoptosis - multiple species has 22 corridors.
+Pathway Arachidonic acid metabolism has 166 corridors.
+Pathway Arrhythmogenic right ventricular cardiomyopathy has 8 corridors.
+Pathway Asthma has 2 corridors.
+Pathway Autoimmune thyroid disease has 6 corridors.
+Pathway Autophagy - other has 11 corridors.
+Pathway Axon guidance has 302 corridors.
+Pathway Bacterial invasion of epithelial cells has 9 corridors.
+Pathway Bile secretion has 9 corridors.
+Pathway C-type lectin receptor signaling pathway has 363 corridors.
+Pathway Carbohydrate digestion and absorption has 2 corridors.
+Pathway Cardiac muscle contraction has 6 corridors.
+Pathway Cell adhesion molecules has 44 corridors.
+Pathway Cellular senescence has 50 corridors.
+Pathway Central carbon metabolism in cancer has 68 corridors.
+Pathway cGMP-PKG signaling pathway has 179 corridors.
+Pathway Chagas disease has 54 corridors.
+Pathway Choline metabolism in cancer has 29 corridors.
+Pathway Cholinergic synapse has 22 corridors.
+Pathway Circadian entrainment has 36 corridors.
+Pathway Cocaine addiction has 20 corridors.
+Pathway Collecting duct acid secretion has 4 corridors.
+Pathway Cytokine-cytokine receptor interaction has 238 corridors.
+Pathway Diabetic cardiomyopathy has 92 corridors.
+Pathway Dilated cardiomyopathy has 17 corridors.
+Pathway Drug metabolism - cytochrome P450 has 15 corridors.
+Pathway Drug metabolism - other enzymes has 7 corridors.
+Pathway ECM-receptor interaction has 70 corridors.
+Pathway EGFR tyrosine kinase inhibitor resistance has 154 corridors.
+Pathway Endocrine resistance has 79 corridors.
+Pathway Endocytosis has 19 corridors.
+Pathway Epithelial cell signaling in Helicobacter pylori infection has 14 corridors.
+Pathway Fanconi anemia pathway has 14 corridors.
+Pathway Fat digestion and absorption has 4 corridors.
+Pathway Fc epsilon RI signaling pathway has 20 corridors.
+Pathway Fluid shear stress and atherosclerosis has 184 corridors.
+Pathway FoxO signaling pathway has 478 corridors.
+Pathway GABAergic synapse has 17 corridors.
+Pathway Gap junction has 30 corridors.
+Pathway Gastric acid secretion has 12 corridors.
+Pathway Glucagon signaling pathway has 49 corridors.
+Pathway Graft-versus-host disease has 3 corridors.
+Pathway Hippo signaling pathway - multiple species has 31 corridors.
+Pathway Hippo signaling pathway has 252 corridors.
+Pathway Homologous recombination has 11 corridors.
+Pathway Hypertrophic cardiomyopathy has 14 corridors.
+Pathway IL-17 signaling pathway has 931 corridors.
+Pathway Inflammatory bowel disease has 81 corridors.
+Pathway Inflammatory mediator regulation of TRP channels has 72 corridors.
+Pathway Insulin resistance has 74 corridors.
+Pathway Insulin secretion has 35 corridors.
+Pathway Insulin signaling pathway has 165 corridors.
+Pathway Intestinal immune network for IgA production has 15 corridors.
+Pathway Kaposi sarcoma-associated herpesvirus infection has 73 corridors.
+Pathway Legionellosis has 31 corridors.
+Pathway Leishmaniasis has 30 corridors.
+Pathway Leukocyte transendothelial migration has 67 corridors.
+Pathway Linoleic acid metabolism has 0 corridors.
+Pathway Lipid and atherosclerosis has 338 corridors.
+Pathway Longevity regulating pathway - multiple species has 40 corridors.
+Pathway Longevity regulating pathway has 82 corridors.
+Pathway M NAmino sugar and nucleotide sugar metabolism has 30 corridors.
+Pathway M NArginine and proline metabolism has 50 corridors.
+Pathway M NArginine biosynthesis has 0 corridors.
+Pathway M NCitrate cycle (TCA cycle) has 0 corridors.
+Pathway M NCysteine and methionine metabolism has 3 corridors.
+Pathway M NFatty acid degradation has 1 corridors.
+Pathway M NFolate biosynthesis has 38 corridors.
+Pathway M NGalactose metabolism has 28 corridors.
+Pathway M NGlutathione metabolism has 2 corridors.
+Pathway M NGlycine serine and threonine metabolism has 27 corridors.
+Pathway M NGlycolysis  Gluconeogenesis has 7 corridors.
+Pathway M NGlycosaminoglycan degradation has 9 corridors.
+Pathway M NGlycosphingolipid biosynthesis - globo and isoglobo series has 11 corridors.
+Pathway M NGlycosphingolipid biosynthesis - lacto and neolacto series has 112 corridors.
+Pathway M NGlycosylphosphatidylinositol (GPI)-anchor biosynthesis has 12 corridors.
+Pathway M NHistidine metabolism has 18 corridors.
+Pathway M NLipoic acid metabolism has 16 corridors.
+Pathway M NLysine degradation has 11 corridors.
+Pathway M NMannose type O-glycan biosynthesis has 5 corridors.
+Pathway M NN-Glycan biosynthesis has 43 corridors.
+Pathway M NNicotinate and nicotinamide metabolism has 104 corridors.
+Pathway M NOne carbon pool by folate has 28 corridors.
+Pathway M NPhenylalanine tyrosine and tryptophan biosynthesis has 0 corridors.
+Pathway M NPorphyrin metabolism has 7 corridors.
+Pathway M NPrimary bile acid biosynthesis has 15 corridors.
+Pathway M NPurine metabolism has 57 corridors.
+Pathway M NPyruvate metabolism has 11 corridors.
+Pathway M NSphingolipid metabolism has 13 corridors.
+Pathway M NStarch and sucrose metabolism has 5 corridors.
+Pathway M NSteroid biosynthesis has 2 corridors.
+Pathway M NSteroid hormone biosynthesis has 0 corridors.
+Pathway M NTerpenoid backbone biosynthesis has 0 corridors.
+Pathway M NTryptophan metabolism has 24 corridors.
+Pathway M NTyrosine metabolism has 47 corridors.
+Pathway M NValine leucine and isoleucine degradation has 56 corridors.
+Pathway MAlanine aspartate and glutamate metabolism has 220 corridors.
+Pathway Malaria has 5 corridors.
+Pathway Malpha-Linolenic acid metabolism has 1 corridors.
+Pathway MAscorbate and aldarate metabolism has 0 corridors.
+Pathway Maturity onset diabetes of the young has 56 corridors.
+Pathway Mbeta-Alanine metabolism has 8 corridors.
+Pathway MBiotin metabolism has 2 corridors.
+Pathway MButanoate metabolism has 0 corridors.
+Pathway MCaffeine metabolism has 4 corridors.
+Pathway MD-Amino acid metabolism has 3 corridors.
+Pathway Melanogenesis has 16 corridors.
+Pathway Metabolism of xenobiotics by cytochrome P450 has 28 corridors.
+Pathway MEther lipid metabolism has 39 corridors.
+Pathway MFatty acid biosynthesis has 0 corridors.
+Pathway MFatty acid elongation has 1 corridors.
+Pathway MFructose and mannose metabolism has 5 corridors.
+Pathway MGlycerolipid metabolism has 9 corridors.
+Pathway MGlycerophospholipid metabolism has 64 corridors.
+Pathway MGlycosphingolipid biosynthesis - ganglio series has 12 corridors.
+Pathway MGlyoxylate and dicarboxylate metabolism has 46 corridors.
+Pathway MicroRNAs in cancer has 190 corridors.
+Pathway Mineral absorption has 8 corridors.
+Pathway MInositol phosphate metabolism has 47 corridors.
+Pathway MMucin type O-glycan biosynthesis has 0 corridors.
+Pathway MNitrogen metabolism has 4 corridors.
+Pathway Morphine addiction has 23 corridors.
+Pathway MOxidative phosphorylation has 2 corridors.
+Pathway MPantothenate and CoA biosynthesis has 9 corridors.
+Pathway MPentose and glucuronate interconversions has 1 corridors.
+Pathway MPentose phosphate pathway has 1 corridors.
+Pathway MPhenylalanine metabolism has 4 corridors.
+Pathway MPropanoate metabolism has 0 corridors.
+Pathway MPyrimidine metabolism has 2 corridors.
+Pathway MRiboflavin metabolism has 4 corridors.
+Pathway mRNA surveillance pathway has 13 corridors.
+Pathway MSulfur metabolism has 5 corridors.
+Pathway MTaurine and hypotaurine metabolism has 13 corridors.
+Pathway MThiamine metabolism has 9 corridors.
+Pathway MUbiquinone and other terpenoid-quinone biosynthesis has 0 corridors.
+Pathway MValine leucine and isoleucine biosynthesis has 2 corridors.
+Pathway MVarious types of N-glycan biosynthesis has 2 corridors.
+Pathway MVitamin B6 metabolism has 0 corridors.
+Pathway NAcute myeloid leukemia has 54 corridors.
+Pathway NAdipocytokine signaling pathway has 38 corridors.
+Pathway NAdrenergic signaling in cardiomyocytes has 59 corridors.
+Pathway NAldosterone synthesis and secretion has 13 corridors.
+Pathway NAlzheimer disease has 102 corridors.
+Pathway NAmyotrophic lateral sclerosis has 61 corridors.
+Pathway NAntigen processing and presentation has 11 corridors.
+Pathway NApoptosis has 209 corridors.
+Pathway Natural killer cell mediated cytotoxicity has 106 corridors.
+Pathway NAutophagy - animal has 260 corridors.
+Pathway NB cell receptor signaling pathway has 34 corridors.
+Pathway NBasal cell carcinoma has 15 corridors.
+Pathway NBladder cancer has 9 corridors.
+Pathway NBreast cancer has 55 corridors.
+Pathway NCalcium signaling pathway has 35 corridors.
+Pathway NcAMP signaling pathway has 1401 corridors.
+Pathway NCell cycle has 25 corridors.
+Pathway NChemical carcinogenesis - DNA adducts has 2 corridors.
+Pathway NChemical carcinogenesis - reactive oxygen species has 53 corridors.
+Pathway NChemical carcinogenesis - receptor activation has 438 corridors.
+Pathway NChemokine signaling pathway has 64 corridors.
+Pathway NCholesterol metabolism has 14 corridors.
+Pathway NChronic myeloid leukemia has 36 corridors.
+Pathway NCobalamin transport and metabolism New! has 8 corridors.
+Pathway NColorectal cancer has 42 corridors.
+Pathway NComplement and coagulation cascades has 206 corridors.
+Pathway NCoronavirus disease - COVID-19 has 64 corridors.
+Pathway NCortisol synthesis and secretion has 29 corridors.
+Pathway NCushing syndrome has 97 corridors.
+Pathway NCytosolic DNA-sensing pathway has 76 corridors.
+Pathway NDopaminergic synapse has 63 corridors.
+Pathway NEfferocytosis has 61 corridors.
+Pathway NEndocrine and other factor-regulated calcium reabsorption has 8 corridors.
+Pathway NEndometrial cancer has 13 corridors.
+Pathway Neomycin kanamycin and gentamicin biosynthesis has 2 corridors.
+Pathway NEpstein-Barr virus infection has 131 corridors.
+Pathway NErbB signaling pathway has 378 corridors.
+Pathway NEstrogen signaling pathway has 56 corridors.
+Pathway Neuroactive ligand-receptor interaction has 105 corridors.
+Pathway Neurotrophin signaling pathway has 103 corridors.
+Pathway Neutrophil extracellular trap formation has 117 corridors.
+Pathway NFc gamma R-mediated phagocytosis has 68 corridors.
+Pathway NFerroptosis has 13 corridors.
+Pathway NFocal adhesion has 143 corridors.
+Pathway NGastric cancer has 70 corridors.
+Pathway NGlioma has 20 corridors.
+Pathway NGlutamatergic synapse has 67 corridors.
+Pathway NGnRH signaling pathway has 10 corridors.
+Pathway NGrowth hormone synthesis secretion and action has 54 corridors.
+Pathway NHedgehog signaling pathway has 102 corridors.
+Pathway NHepatitis B has 64 corridors.
+Pathway NHepatitis C has 80 corridors.
+Pathway NHepatocellular carcinoma has 54 corridors.
+Pathway NHerpes simplex virus 1 infection has 92 corridors.
+Pathway NHIF-1 signaling pathway has 331 corridors.
+Pathway NHuman cytomegalovirus infection has 107 corridors.
+Pathway NHuman immunodeficiency virus 1 infection has 64 corridors.
+Pathway NHuman papillomavirus infection has 85 corridors.
+Pathway NHuman T-cell leukemia virus 1 infection has 172 corridors.
+Pathway NHuntington disease has 30 corridors.
+Pathway Nicotine addiction has 9 corridors.
+Pathway NInfluenza A has 98 corridors.
+Pathway NJAK-STAT signaling pathway has 4662 corridors.
+Pathway NLong-term depression has 10 corridors.
+Pathway NLong-term potentiation has 15 corridors.
+Pathway NMAPK signaling pathway has 675 corridors.
+Pathway NMeasles has 80 corridors.
+Pathway NMelanoma has 11 corridors.
+Pathway NMitophagy - animal has 147 corridors.
+Pathway NmTOR signaling pathway has 242 corridors.
+Pathway NNecroptosis has 174 corridors.
+Pathway NNF-kappa B signaling pathway has 231 corridors.
+Pathway NNOD-like receptor signaling pathway has 415 corridors.
+Pathway NNon-small cell lung cancer has 43 corridors.
+Pathway NNotch signaling pathway has 50 corridors.
+Pathway Non-alcoholic fatty liver disease has 27 corridors.
+Pathway NPancreatic cancer has 32 corridors.
+Pathway NParathyroid hormone synthesis secretion and action has 143 corridors.
+Pathway NParkinson disease has 37 corridors.
+Pathway NPathogenic Escherichia coli infection has 80 corridors.
+Pathway NPathways in cancer has 1383 corridors.
+Pathway NPathways of neurodegeneration - multiple diseases has 169 corridors.
+Pathway NPhagosome has 2 corridors.
+Pathway NPI3K-Akt signaling pathway has 363 corridors.
+Pathway NPrion disease has 4 corridors.
+Pathway NProlactin signaling pathway has 46 corridors.
+Pathway NProstate cancer has 29 corridors.
+Pathway NProtein processing in endoplasmic reticulum has 13 corridors.
+Pathway NRas signaling pathway has 225 corridors.
+Pathway NRenal cell carcinoma has 24 corridors.
+Pathway NRenin secretion has 22 corridors.
+Pathway NRenin-angiotensin system has 22 corridors.
+Pathway NRIG-I-like receptor signaling pathway has 322 corridors.
+Pathway NSalmonella infection has 184 corridors.
+Pathway NShigellosis has 65 corridors.
+Pathway NSmall cell lung cancer has 21 corridors.
+Pathway NSpinocerebellar ataxia has 32 corridors.
+Pathway NT cell receptor signaling pathway has 238 corridors.
+Pathway NTGF-beta signaling pathway has 117 corridors.
+Pathway NThermogenesis has 104 corridors.
+Pathway NThyroid cancer has 12 corridors.
+Pathway NThyroid hormone signaling pathway has 306 corridors.
+Pathway NThyroid hormone synthesis has 12 corridors.
+Pathway NTight junction has 177 corridors.
+Pathway NTNF signaling pathway has 21 corridors.
+Pathway NToll-like receptor signaling pathway has 272 corridors.
+Pathway NVasopressin-regulated water reabsorption has 4 corridors.
+Pathway NVitamin digestion and absorption has 3 corridors.
+Pathway NWnt signaling pathway has 458 corridors.
+Pathway NYersinia infection has 69 corridors.
+Pathway Olfactory transduction has 10 corridors.
+Pathway Oocyte meiosis has 50 corridors.
+Pathway Osteoclast differentiation has 139 corridors.
+Pathway Ovarian steroidogenesis has 20 corridors.
+Pathway Oxytocin signaling pathway has 42 corridors.
+Pathway p53 signaling pathway has 278 corridors.
+Pathway Pancreatic secretion has 12 corridors.
+Pathway PD-L1 expression and PD-1 checkpoint pathway in cancer has 24 corridors.
+Pathway Pertussis has 17 corridors.
+Pathway Phosphatidylinositol signaling system has 99 corridors.
+Pathway Phospholipase D signaling pathway has 52 corridors.
+Pathway Phosphonate and phosphinate metabolism has 2 corridors.
+Pathway Phototransduction has 15 corridors.
+Pathway Platelet activation has 54 corridors.
+Pathway Platinum drug resistance has 29 corridors.
+Pathway PPAR signaling pathway has 100 corridors.
+Pathway Progesterone-mediated oocyte maturation has 14 corridors.
+Pathway Protein digestion and absorption has 1 corridors.
+Pathway Proteoglycans in cancer has 147 corridors.
+Pathway Proximal tubule bicarbonate reclamation has 2 corridors.
+Pathway Rap1 signaling pathway has 228 corridors.
+Pathway Regulation of actin cytoskeleton has 156 corridors.
+Pathway Regulation of lipolysis in adipocytes has 20 corridors.
+Pathway Relaxin signaling pathway has 63 corridors.
+Pathway Retinol metabolism has 0 corridors.
+Pathway Retrograde endocannabinoid signaling has 12 corridors.
+Pathway Rheumatoid arthritis has 7 corridors.
+Pathway RNA degradation has 4 corridors.
+Pathway Salivary secretion has 10 corridors.
+Pathway Selenocompound metabolism has 6 corridors.
+Pathway Serotonergic synapse has 20 corridors.
+Pathway Signaling pathways regulating pluripotency of stem cells has 12 corridors.
+Pathway SNARE interactions in vesicular transport has 5 corridors.
+Pathway Sphingolipid signaling pathway has 80 corridors.
+Pathway Staphylococcus aureus infection has 17 corridors.
+Pathway Sulfur relay system has 5 corridors.
+Pathway Synaptic vesicle cycle has 4 corridors.
+Pathway Systemic lupus erythematosus has 4 corridors.
+Pathway Taste transduction has 30 corridors.
+Pathway Th1 and Th2 cell differentiation has 71 corridors.
+Pathway Th17 cell differentiation has 152 corridors.
+Pathway Toxoplasmosis has 35 corridors.
+Pathway Transcriptional misregulation in cancer has 9 corridors.
+Pathway Tuberculosis has 593 corridors.
+Pathway Type I diabetes mellitus has 2 corridors.
+Pathway Type II diabetes mellitus has 12 corridors.
+Pathway Vascular smooth muscle contraction has 53 corridors.
+Pathway VEGF signaling pathway has 14 corridors.
+Pathway Vibrio cholerae infection has 15 corridors.
+Pathway Viral carcinogenesis has 3 corridors.
+Pathway Viral life cycle - HIV-1 has 7 corridors.
+Pathway Viral myocarditis has 10 corridors.
+Pathway Viral protein interaction with cytokine and cytokine receptor has 36 corridors.

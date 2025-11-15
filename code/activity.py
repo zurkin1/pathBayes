@@ -1,5 +1,13 @@
+'''
+Electrical flow treats the graph as an electrical circuit:
+- Each edge has a conductance (capacity), here = UDP.
+- Sources are fixed at high potential; sinks are fixed at low potential.
+- All other node potentials are determined by Kirchhoff’s law (net current = 0 at interior nodes).
+- Solving these constraints leads to a linear system of the form 𝐿𝑣=𝑏, where 𝐿 is the graph Laplacian.
+- Once node potentials 𝑣 are known, flows = conductance × voltage-difference on each edge.
+- This is not solving an ODE over time - it’s solving a static linear system that gives the unique steady-state currents in one shot.
+'''
 import pandas as pd
-import numpy as np
 import networkx as nx
 import warnings
 from metrics import *
@@ -11,10 +19,12 @@ from functools import partial
 warnings.simplefilter("error", RuntimeWarning) #Stop on warnings.
 
 
-# Load and parse interactions into simple pathway_interactions dictionary data structure. e.g.
-# pathway_interactions['Adherens junction'][0] = (['baiap2', 'wasf2', 'wasf3', 'wasf1'], 'activation', ['actb', 'actg1'], 'Adherens junction')
 def parse_pathway_interactions(relations_file):
-    """Parse interactions and assign unique IDs to each"""
+    """
+    Parse interactions and assign unique IDs to each
+    Load and parse interactions into simple pathway_interactions dictionary data structure. e.g.
+    pathway_interactions['Adherens junction'][0] = (['baiap2', 'wasf2', 'wasf3', 'wasf1'], 'activation', ['actb', 'actg1'], 'Adherens junction')
+    """
     pathway_relations = pd.read_csv(relations_file)
     pathway_relations['source'] = pathway_relations['source'].fillna('').astype(str).str.lower().str.split('*')
     pathway_relations['target'] = pathway_relations['target'].fillna('').astype(str).str.lower().str.split('*')   
@@ -27,7 +37,7 @@ def parse_pathway_interactions(relations_file):
         
         # Store interaction with its global ID for fast lookup
         interactions_by_pathway[pathway].append({
-            'id': idx,  # Unique interaction ID
+            'id': idx,
             'source': row['source'],
             'type': row['interactiontype'],
             'target': row['target'],
@@ -37,28 +47,22 @@ def parse_pathway_interactions(relations_file):
     return interactions_by_pathway, list(interactions_by_pathway.keys())
 
 
+# Initialize graph structures. Built once at module load, reused for all samples.
 pathway_interactions, pathway_names = parse_pathway_interactions('./data/pathway_relations.csv')
-
-
-def is_inhibitory(interaction_type):
-    """Check if interaction type is inhibitory"""
-    inhibitory_keywords = ['inhibition', 'repression', 'dissociation', 'dephosphorylation', 'ubiquitination']
-    return any(keyword in interaction_type.lower() for keyword in inhibitory_keywords)
 
 
 def build_pathway_graph_structure(interactions):
     """
     Build the static graph structure for a pathway.
-    This is called once per pathway and cached.
     Stores only topology and gene names no sample-specific data.
-    Breaks cycles using edge betweenness centrality.
     
     Returns: NetworkX graph with:
     - Nodes: interaction IDs
     - Node attrs: source_genes, target_genes, interaction_type
-    - Edge attrs: gene (the shared gene creating this edge)
+    - Edge attrs: genes (the shared genes creating this edge)
+    - Graph attrs: corridors (list of (source, sink) tuples for top 20 longest paths)
     """
-    G = nx.MultiDiGraph()
+    G = nx.DiGraph()
     
     # Add all nodes first
     for interaction in interactions:
@@ -77,12 +81,69 @@ def build_pathway_graph_structure(interactions):
                 continue
             
             shared_genes = set(int1['target']) & set(int2['source'])
-            for gene in shared_genes:
-                G.add_edge(
-                    int1['id'], 
-                    int2['id'], 
-                    gene=gene # Store which gene creates this connection
-                )
+            if shared_genes:
+                # Store all genes that create this connection
+                if G.has_edge(int1['id'], int2['id']):
+                    # Add to existing gene list
+                    G[int1['id']][int2['id']]['genes'].update(shared_genes)
+                else:
+                    # Create new edge
+                    G.add_edge(int1['id'], int2['id'], genes=shared_genes)
+
+    # Prune: keep only nodes on at least one source → sink path
+    sources = [node for node in G.nodes if G.in_degree(node) == 0]
+    sinks   = [node for node in G.nodes if G.out_degree(node) == 0]
+    if sources and sinks:
+        reachable_from_sources = set()
+        for s in sources:
+            reachable_from_sources |= nx.descendants(G, s) | {s}
+        
+        can_reach_sinks = set()
+        for t in sinks:
+            can_reach_sinks |= nx.ancestors(G, t) | {t}
+        
+        valid_nodes = reachable_from_sources & can_reach_sinks
+        if valid_nodes:
+            G = G.subgraph(valid_nodes).copy()
+
+    def make_acyclic(G):
+        G_copy = G.copy()
+        try:
+            while True:
+                cycle = nx.find_cycle(G_copy, orientation='original')
+                # Remove one edge from the cycle to break it
+                edge_to_remove = cycle[0][:2]
+                G_copy.remove_edge(*edge_to_remove)
+        except nx.exception.NetworkXNoCycle:
+            # No cycles left
+            pass
+        return G_copy
+
+    # Find top 20 longest paths using iterative removal
+    def longest_path_top_k(G, k=20):
+        paths = []
+        G_copy = G.copy()
+        for _ in range(k):
+            try:
+                longest_path = nx.dag_longest_path(G_copy)
+            except (nx.NetworkXError, nx.NetworkXNotImplemented):
+                break
+            if len(longest_path) < 2:
+                break
+            paths.append(longest_path)
+            edges_to_remove = list(zip(longest_path, longest_path[1:]))
+            G_copy.remove_edges_from(edges_to_remove)
+            if G_copy.number_of_edges() == 0:
+                break
+        return paths
+    
+    G_acyclic = make_acyclic(G)
+    # Get top 20 longest paths and extract (source, sink) pairs
+    longest_paths = longest_path_top_k(G_acyclic, k=20)
+    corridors = [(path[0], path[-1]) for path in longest_paths if len(path) >= 2]
+    
+    G.graph['corridors'] = corridors
+    
     return G
 
 
@@ -94,96 +155,56 @@ def initialize_pathway_graphs(PATHWAY_GRAPHS):
     print(f"Built {len(PATHWAY_GRAPHS)} pathway graphs")
 
 
-def diffuse_pathway_activity(G, sample_udp, alpha=0.85, max_iter=100, tol=1e-6):
-    """
-    Diffusion-based pathway activity calculation.
-    Edges carry UDP-derived weights (normalized), representing diffusion capacity.
-    Nodes = interactions; edges = shared genes.
-    Steps:
-    1) Assign edge weights = normalized UDP of connecting gene.
-    2) Build stochastic transition matrix W.
-    3) Run random-walk-with-restart until steady state.
-    4) Return mean steady-state activation of nodes (optionally leaves only).
-    """
-    nodes = list(G.nodes)
-    n = len(nodes)
-    node_index = {n: i for i, n in enumerate(nodes)}
+def is_inhibitory(interaction_type):
+    """Check if interaction type is inhibitory"""
+    inhibitory_keywords = ['inhibition', 'repression', 'dissociation', 'dephosphorylation', 'ubiquitination']
+    return any(keyword in interaction_type.lower() for keyword in inhibitory_keywords)
 
-    # Build weighted adjacency matrix W based on gene UDP values
-    W = np.zeros((n, n), dtype=float)
-    min_v, max_v = sample_udp.min(), sample_udp.max()
-    norm = lambda x: (x - min_v) / (max_v - min_v + 1e-9)
 
-    for u, v, data in G.edges(data=True):
-        gene = data['gene']
-        udp = norm(sample_udp.get(gene, 0.0))
-        # optional: handle inhibitory edges
-        if is_inhibitory(G.nodes[u]['interaction_type']):
-            udp = -udp
-        W[node_index[u], node_index[v]] += udp
-
-    # Normalize to make stochastic matrix
-    W = W / (W.max() + 1e-9)
-
-    # Restart vector: use the sample’s UDP values aggregated over genes belonging to each node.
-    s = np.zeros(n)
-    for node in nodes:
-        src_genes = G.nodes[node]['source_genes']
-        tgt_genes = G.nodes[node]['target_genes']
-        node_udp = np.mean([sample_udp.get(g, 0.0) for g in src_genes + tgt_genes])
-        s[node_index[node]] = node_udp
-    # Normalize only to prevent explosion, not to erase contrast
-    s /= (np.max(s) + 1e-9)
-
-    # Random walk with restart
-    x = s.copy()
-    for _ in range(max_iter):
-        x_new = alpha * W @ x + (1 - alpha) * s
-        if np.linalg.norm(x_new - x, 1) < tol:
-            x = x_new
-            break
-        x = x_new
-
-    # Average node activations as pathway activity
-    return float(np.mean(x))
+def resistance_pathway_activity(sample_udp: pd.Series, G):
+    """Using NetworkX. Requires undirected graph."""
+    G_undirected = G.to_undirected()
+    # Set edge weights as conductances
+    for u, v, data in G_undirected.edges(data=True):
+        genes = data['genes']
+        # Parallel conductances add up
+        total_conductance = sum(sample_udp.get(gene, 0.0) for gene in genes)
+        G_undirected[u][v]['conductance'] = total_conductance
+    
+    # Get pre computed corridors
+    corridors = G.graph.get('corridors', [])
+    
+    # Compute resistance only for identified corridors
+    total_flow = 0.0
+    for source, sink in corridors:
+        # Get connected component containing this source-sink pair
+        component_nodes = nx.node_connected_component(G_undirected, source)
+        if sink in component_nodes:
+            subgraph = G_undirected.subgraph(component_nodes).copy()              
+            resistance = nx.resistance_distance(
+                subgraph, source, sink, 
+                weight='conductance',
+                invert_weight=False
+            )
+            
+            if resistance > 0:
+                flow = 1.0 / resistance
+                if is_inhibitory(G.nodes[sink].get("interaction_type", "")):
+                    flow = -flow
+                total_flow += flow
+                    
+    return float(total_flow)
 
 
 def process_sample(sample_udp: pd.Series, PATHWAY_GRAPHS):
     """
-    Compute diffusion-based pathway activities for one sample.
+    Compute pathway activities for one sample.
     """
     activities = {}
     for pathway, G in PATHWAY_GRAPHS.items():
-        activity = diffuse_pathway_activity(G, sample_udp)
+        activity = resistance_pathway_activity(sample_udp, G)
         activities[pathway] = activity
     return activities
-
-
-def calc_activity(udp_file='./data/output_udp.csv', output_file='./data/output_activity.csv'):
-    """Main entry: load UDP, run pathway analysis, and save activity matrix."""
-    
-    # Initialize graph structures.
-    # Global cache for pathway graphs.
-    # Built once at module load, reused for all samples
-    PATHWAY_GRAPHS = {}
-    initialize_pathway_graphs(PATHWAY_GRAPHS)
-    
-    udp_df = pd.read_csv(udp_file, sep='\t', index_col=0)
-    udp_df.index = udp_df.index.str.lower()
-    
-    if DEBUG:
-        for col in udp_df.columns:
-            print(f"Processing sample {col}...")
-            result = process_sample(udp_df[col], PATHWAY_GRAPHS)
-        exit(0)
-    
-    df_to_process = udp_df.T
-    print(f"Processing {len(df_to_process)} samples...")
-    results = parallel_apply(df_to_process, process_sample, PATHWAY_GRAPHS).T
-    results = results.round(4)
-    results.to_csv(output_file)
-    print(f"Saved results to {output_file}")
-    return results
 
 
 def parallel_apply(df, func, PATHWAY_GRAPHS):
@@ -200,6 +221,30 @@ def parallel_apply(df, func, PATHWAY_GRAPHS):
         )
 
     return pd.DataFrame(results, index=df.index)
+
+
+def calc_activity(udp_file='./data/output_udp.csv', output_file='./data/output_activity.csv'):
+    """Main entry: load UDP, run pathway analysis, and save activity matrix."""
+    udp_df = pd.read_csv(udp_file, sep='\t', index_col=0)
+    udp_df.index = udp_df.index.str.lower()
+
+    PATHWAY_GRAPHS = {}
+    initialize_pathway_graphs(PATHWAY_GRAPHS)
+
+    DEBUG=False
+    if DEBUG:
+        for col in udp_df.columns:
+            print(f"Processing sample {col}...")
+            result = process_sample(udp_df[col])
+        exit(0)
+   
+    df_to_process = udp_df.T
+    print(f"Processing {len(df_to_process)} samples...")
+    results = parallel_apply(df_to_process, process_sample, PATHWAY_GRAPHS).T
+    results = results.round(4)
+    results.to_csv(output_file)
+    print(f"Saved results to {output_file}")
+    return results
 
 
 if __name__ == '__main__':
